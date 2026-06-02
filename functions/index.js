@@ -48,12 +48,25 @@ exports.noviUporabnik = beforeUserCreated(async (event) => {
   }
 });
 
-// 1b. CALLABLE – Pridobi profil prijavljenega uporabnika
+// 1b. CALLABLE – Pridobi profil prijavljenega uporabnika (ustvari ga če ne obstaja)
 exports.pridobiProfil = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  const doc = await db.collection("uporabniki").doc(request.auth.uid).get();
-  if (!doc.exists) throw new HttpsError("not-found", "Profil ne obstaja.");
+  const docRef = db.collection("uporabniki").doc(request.auth.uid);
+  let doc = await docRef.get();
+
+  if (!doc.exists) {
+    await docRef.set({
+      email: request.auth.token.email || "",
+      ime: request.auth.token.name || "Neznan uporabnik",
+      telefon: "",
+      lokacija: "",
+      ustvarjen: admin.firestore.FieldValue.serverTimestamp(),
+      aktiven: true,
+    });
+    doc = await docRef.get();
+  }
+
   return { uid: request.auth.uid, ...doc.data() };
 });
 
