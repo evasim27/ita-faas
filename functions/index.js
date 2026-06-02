@@ -261,7 +261,58 @@ exports.pridobiSporocila = onCall(async (request) => {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 });
 
-// 3c. FIRESTORE TRIGGER – Ob novem sporočilu ustvari obvestilo za prodajalca
+// 3c. CALLABLE – Pridobi vsa sporočila za vse prodajalčeve oglase
+exports.pridobiVsaSporocila = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
+
+  // Pridobi vse prodajalčeve oglase
+  const oglasi = await db.collection("oglasi").where("userId", "==", request.auth.uid).get();
+  const oglasIds = oglasi.docs.map(d => d.id);
+  const oglasMap = {};
+  oglasi.docs.forEach(d => { oglasMap[d.id] = d.data().naslov; });
+
+  if (oglasIds.length === 0) return [];
+
+  // Pridobi vsa sporočila za te oglase (Firestore podpira do 30 v whereIn)
+  const chunks = [];
+  for (let i = 0; i < oglasIds.length; i += 10) chunks.push(oglasIds.slice(i, i + 10));
+
+  const sporocila = [];
+  for (const chunk of chunks) {
+    const snap = await db.collection("sporocila").where("oglasId", "in", chunk).orderBy("poslano", "desc").get();
+    snap.docs.forEach(d => sporocila.push({ id: d.id, oglasNaslov: oglasMap[d.data().oglasId] || "", ...d.data() }));
+  }
+
+  return sporocila;
+});
+
+// 3d. CALLABLE – Odgovori na sporočilo
+exports.odgovoriNaSporocilo = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
+
+  const { sporociloId, vsebina } = request.data;
+  if (!sporociloId || !vsebina) throw new HttpsError("invalid-argument", "Manjkajo podatki.");
+
+  const sporociloDoc = await db.collection("sporocila").doc(sporociloId).get();
+  if (!sporociloDoc.exists) throw new HttpsError("not-found", "Sporočilo ne obstaja.");
+
+  const { oglasId } = sporociloDoc.data();
+  const oglasDoc = await db.collection("oglasi").doc(oglasId).get();
+  if (oglasDoc.data().userId !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "Samo lastnik oglasa lahko odgovori.");
+  }
+
+  await db.collection("sporocila").doc(sporociloId).collection("odgovori").add({
+    posiljatelj: request.auth.uid,
+    posiljateljEmail: request.auth.token.email,
+    vsebina,
+    poslano: FieldValue.serverTimestamp(),
+  });
+
+  return { message: "Odgovor poslan." };
+});
+
+// 3e. FIRESTORE TRIGGER – Ob novem sporočilu ustvari obvestilo za prodajalca
 exports.obvestiloObSporocilu = onDocumentCreated("sporocila/{sporociloId}", async (event) => {
   const sporocilo = event.data.data();
   const { oglasId, posiljateljeEmail, vsebina } = sporocilo;

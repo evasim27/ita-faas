@@ -4,6 +4,83 @@ import { signOut } from 'firebase/auth'
 import { auth, call, BASE_URL, formatDate } from '../firebase'
 import { useAuth } from '../App'
 
+function SporocilaZavihek() {
+  const [sporocila, setSporocila] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [odgovori, setOdgovori] = useState({}) // sporociloId → vsebina
+  const [statusi, setStatusi] = useState({})   // sporociloId → 'ok'|'err'
+
+  useEffect(() => {
+    call('pridobiVsaSporocila')({})
+      .then(res => { setSporocila(res.data || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const posljiOdgovor = async (sporociloId) => {
+    const vsebina = odgovori[sporociloId]
+    if (!vsebina?.trim()) return
+    try {
+      await call('odgovoriNaSporocilo')({ sporociloId, vsebina })
+      setStatusi(s => ({ ...s, [sporociloId]: 'ok' }))
+      setOdgovori(o => ({ ...o, [sporociloId]: '' }))
+    } catch (err) {
+      setStatusi(s => ({ ...s, [sporociloId]: 'err' }))
+    }
+  }
+
+  if (loading) return <div className="loading">Nalaganje sporočil...</div>
+  if (sporocila.length === 0) return <div className="prazno"><p>Ni prejetih sporočil.</p></div>
+
+  // Grupiramo po oglasu
+  const poOglasih = sporocila.reduce((acc, s) => {
+    const key = s.oglasId
+    if (!acc[key]) acc[key] = { naslov: s.oglasNaslov, sporocila: [] }
+    acc[key].sporocila.push(s)
+    return acc
+  }, {})
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {Object.entries(poOglasih).map(([oglasId, skupina]) => (
+        <div key={oglasId} style={{ border: '1.5px solid #111', background: '#fff' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1.5px solid #111', background: '#f4f2ee' }}>
+            <Link to={`/oglas/${oglasId}`} style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111', textDecoration: 'none' }}>
+              {skupina.naslov || 'Oglas'}
+            </Link>
+          </div>
+          {skupina.sporocila.map(s => (
+            <div key={s.id} style={{ padding: '16px', borderBottom: '1px solid #eee' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{s.posiljateljEmail}</span>
+                <span style={{ fontSize: '0.75rem', color: '#999' }}>{formatDate(s.poslano)}</span>
+              </div>
+              <p style={{ fontSize: '0.9rem', color: '#333', marginBottom: '12px' }}>{s.vsebina}</p>
+
+              {statusi[s.id] === 'ok' && <p className="uspeh" style={{ marginBottom: '8px' }}>Odgovor poslan.</p>}
+              {statusi[s.id] === 'err' && <p className="napaka" style={{ marginBottom: '8px' }}>Napaka pri pošiljanju.</p>}
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="Odgovori..."
+                  value={odgovori[s.id] || ''}
+                  onChange={e => setOdgovori(o => ({ ...o, [s.id]: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && posljiOdgovor(s.id)}
+                  style={{ flex: 1, padding: '8px 10px', border: '1.5px solid #111', fontSize: '0.85rem', fontFamily: 'inherit' }}
+                />
+                <button className="btn btn-primary" onClick={() => posljiOdgovor(s.id)}
+                  style={{ padding: '8px 16px', fontSize: '0.82rem' }}>
+                  Pošlji
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Profil() {
   const user = useAuth()
   const navigate = useNavigate()
@@ -61,13 +138,14 @@ export default function Profil() {
       </div>
 
       <div className="tabs">
-        <div className={`tab ${zavihek === 'profil' ? 'active' : ''}`} onClick={() => setZavihek('profil')}>Moji podatki</div>
-        <div className={`tab ${zavihek === 'oglasi' ? 'active' : ''}`} onClick={() => setZavihek('oglasi')}>Moji oglasi ({mojiOglasi.length})</div>
+        <div className={`tab ${zavihek === 'profil' ? 'active' : ''}`} onClick={() => setZavihek('profil')}>Podatki</div>
+        <div className={`tab ${zavihek === 'oglasi' ? 'active' : ''}`} onClick={() => setZavihek('oglasi')}>Oglasi ({mojiOglasi.length})</div>
+        <div className={`tab ${zavihek === 'sporocila' ? 'active' : ''}`} onClick={() => setZavihek('sporocila')}>Sporočila</div>
       </div>
 
       {zavihek === 'profil' && (
         <div className="forma" style={{ marginTop: 0 }}>
-          {status === 'uspeh' && <p className="uspeh">✅ Profil posodobljen!</p>}
+          {status === 'uspeh' && <p className="uspeh">Profil posodobljen!</p>}
           {status === 'napaka' && <p className="napaka">Napaka pri posodabljanju.</p>}
           <form onSubmit={posodobiProfil}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
@@ -99,7 +177,7 @@ export default function Profil() {
           ) : (
             <div className="grid">
               {mojiOglasi.map(o => (
-                <div key={o.id} className="kartica" style={{ display: 'block', textDecoration: 'none' }}>
+                <div key={o.id} className="kartica">
                   <Link to={`/oglas/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="kartica-slika">
                       {o.slike && o.slike[0]
@@ -107,16 +185,14 @@ export default function Profil() {
                         : <span>📦</span>}
                     </div>
                     <div className="kartica-body">
+                      <div className="kartica-kategorija">{o.kategorija}</div>
                       <div className="kartica-naslov">{o.naslov}</div>
                       <div className="kartica-cena">{o.cena} €</div>
-                      <div className="kartica-meta">📅 {formatDate(o.ustvarjen)}</div>
-                      <span className="kartica-kategorija" style={{ background: o.aktiven ? '#e8f5e9' : '#fce4ec', color: o.aktiven ? '#2e7d32' : '#c62828' }}>
-                        {o.aktiven ? '✅ aktiven' : '❌ neaktiven'}
-                      </span>
+                      <div className="kartica-meta">{formatDate(o.ustvarjen)}</div>
                     </div>
                   </Link>
-                  <div style={{ display: 'flex', gap: '6px', padding: '8px 12px 12px' }}>
-                    <Link to={`/uredi/${o.id}`} className="btn btn-secondary" style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', padding: '6px', textDecoration: 'none' }}>✏️ Uredi</Link>
+                  <div style={{ padding: '8px 12px 12px' }}>
+                    <Link to={`/uredi/${o.id}`} className="btn btn-secondary" style={{ width: '100%', textAlign: 'center', fontSize: '0.82rem', textDecoration: 'none', display: 'block' }}>Uredi</Link>
                   </div>
                 </div>
               ))}
@@ -124,6 +200,8 @@ export default function Profil() {
           )}
         </div>
       )}
+
+      {zavihek === 'sporocila' && <SporocilaZavihek />}
     </div>
   )
 }
