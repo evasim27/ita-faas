@@ -1,88 +1,28 @@
 {
   "info": {
     "name": "ITA FaaS – Tržnica Oglasov",
-    "description": "Testiranje Firebase Cloud Functions za brezstrežniško tržnico oglasov.\n\nPred testiranjem nastavi spremenljivko BASE_URL:\nhttp://127.0.0.1:5001/ita-faas-3fd3b/us-central1\n\nZa zaščitene endpointe nastavi TOKEN z veljavnim Firebase ID tokenom.",
+    "description": "Testiranje Firebase Cloud Functions.\n\nBASE_URL = http://127.0.0.1:5001/ita-faas-3fd3b/us-central1\n\nonRequest funkcije: navaden HTTP klic\nonCall funkcije: POST z { data: {...} } in Bearer token",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "BASE_URL",
-      "value": "http://127.0.0.1:5001/ita-faas-3fd3b/us-central1",
-      "type": "string"
-    },
-    {
-      "key": "TOKEN",
-      "value": "<firebase_id_token>",
-      "type": "string"
-    },
-    {
-      "key": "OGLAS_ID",
-      "value": "",
-      "type": "string"
-    }
+    { "key": "BASE_URL", "value": "http://127.0.0.1:5001/ita-faas-3fd3b/us-central1" },
+    { "key": "AUTH_URL", "value": "http://127.0.0.1:9099" },
+    { "key": "TOKEN", "value": "" },
+    { "key": "OGLAS_ID", "value": "" }
   ],
   "item": [
     {
-      "name": "1. Avtentikacija & Profili",
+      "name": "0. Pridobi token (Auth Emulator)",
       "item": [
         {
-          "name": "1a. Pridobi profil (GET)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{TOKEN}}"
-              }
-            ],
-            "url": {
-              "raw": "{{BASE_URL}}/pridobiProfil",
-              "host": ["{{BASE_URL}}"],
-              "path": ["pridobiProfil"]
-            },
-            "description": "Vrne profil prijavljenega uporabnika. Zahteva JWT token."
-          }
-        },
-        {
-          "name": "1b. Posodobi profil (PUT)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{TOKEN}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ime\": \"Ana Novak\",\n  \"telefon\": \"041 123 456\",\n  \"lokacija\": \"Ljubljana\"\n}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/posodobiProfil",
-              "host": ["{{BASE_URL}}"],
-              "path": ["posodobiProfil"]
-            },
-            "description": "Posodobi ime, telefon in lokacijo uporabnika. Zahteva JWT token."
-          }
-        }
-      ]
-    },
-    {
-      "name": "2. Upravljanje Oglasov",
-      "item": [
-        {
-          "name": "2a. Objavi oglas (POST)",
+          "name": "0a. Registracija – ustvari testnega uporabnika",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "var resp = pm.response.json();",
-                  "if (resp.id) { pm.collectionVariables.set('OGLAS_ID', resp.id); }"
+                  "var r = pm.response.json();",
+                  "if (r.idToken) { pm.collectionVariables.set('TOKEN', r.idToken); pm.test('Token shranjen', () => pm.expect(r.idToken).to.be.a('string')); }"
                 ],
                 "type": "text/javascript"
               }
@@ -90,30 +30,99 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{TOKEN}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"naslov\": \"iPhone 14 Pro – odlično stanje\",\n  \"opis\": \"Malo rabljen, brez praske. Komplet z originalno škatlo.\",\n  \"cena\": 750,\n  \"kategorija\": \"elektronika\"\n}"
+              "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"geslo123\",\n  \"returnSecureToken\": true\n}"
             },
             "url": {
-              "raw": "{{BASE_URL}}/objavaOglasa",
-              "host": ["{{BASE_URL}}"],
-              "path": ["objavaOglasa"]
+              "raw": "{{AUTH_URL}}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key",
+              "host": ["{{AUTH_URL}}"],
+              "path": ["identitytoolkit.googleapis.com", "v1", "accounts:signUp"],
+              "query": [{ "key": "key", "value": "fake-api-key" }]
             },
-            "description": "Ustvari nov oglas. Zahteva JWT token. ID se shrani v spremenljivko OGLAS_ID."
+            "description": "Ustvari novega uporabnika v Auth Emulatorju in shrani token v spremenljivko TOKEN."
           }
         },
         {
-          "name": "2b. Pridobi vse oglase (GET)",
+          "name": "0b. Prijava – pridobi svež token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var r = pm.response.json();",
+                  "if (r.idToken) { pm.collectionVariables.set('TOKEN', r.idToken); pm.test('Token shranjen', () => pm.expect(r.idToken).to.be.a('string')); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"geslo123\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "{{AUTH_URL}}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key",
+              "host": ["{{AUTH_URL}}"],
+              "path": ["identitytoolkit.googleapis.com", "v1", "accounts:signInWithPassword"],
+              "query": [{ "key": "key", "value": "fake-api-key" }]
+            },
+            "description": "Prijava obstoječega uporabnika. Token se shrani v spremenljivko TOKEN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Profili (onCall)",
+      "item": [
+        {
+          "name": "1a. Pridobi profil",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"data\": {}\n}" },
+            "url": {
+              "raw": "{{BASE_URL}}/pridobiProfil",
+              "host": ["{{BASE_URL}}"],
+              "path": ["pridobiProfil"]
+            },
+            "description": "onCall – vrne profil prijavljenega uporabnika."
+          }
+        },
+        {
+          "name": "1b. Posodobi profil",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"ime\": \"Ana Novak\",\n    \"telefon\": \"041 123 456\",\n    \"lokacija\": \"Ljubljana\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/posodobiProfil",
+              "host": ["{{BASE_URL}}"],
+              "path": ["posodobiProfil"]
+            },
+            "description": "onCall – posodobi ime, telefon, lokacijo."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Oglasi",
+      "item": [
+        {
+          "name": "2a. Pridobi vse oglase (onRequest – javno)",
           "request": {
             "method": "GET",
             "header": [],
@@ -122,11 +131,11 @@
               "host": ["{{BASE_URL}}"],
               "path": ["pridobiOglase"]
             },
-            "description": "Vrne seznam vseh aktivnih oglasov. Ne zahteva avtentikacije."
+            "description": "onRequest – javni endpoint, ne zahteva tokena."
           }
         },
         {
-          "name": "2c. Pridobi en oglas (GET)",
+          "name": "2b. Pridobi en oglas (onRequest – javno)",
           "request": {
             "method": "GET",
             "header": [],
@@ -134,141 +143,143 @@
               "raw": "{{BASE_URL}}/pridobiOglas?id={{OGLAS_ID}}",
               "host": ["{{BASE_URL}}"],
               "path": ["pridobiOglas"],
-              "query": [
-                {
-                  "key": "id",
-                  "value": "{{OGLAS_ID}}"
-                }
-              ]
+              "query": [{ "key": "id", "value": "{{OGLAS_ID}}" }]
             },
-            "description": "Vrne en oglas po ID-ju. Nastavi OGLAS_ID spremenljivko ali ročno vstavi ID."
+            "description": "onRequest – javni endpoint."
           }
         },
         {
-          "name": "2d. Posodobi oglas (PUT)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{TOKEN}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+          "name": "2c. Objavi oglas (onCall)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var r = pm.response.json();",
+                  "if (r.result && r.result.id) { pm.collectionVariables.set('OGLAS_ID', r.result.id); pm.test('OGLAS_ID shranjen', () => pm.expect(r.result.id).to.be.a('string')); }"
+                ],
+                "type": "text/javascript"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id\": \"{{OGLAS_ID}}\",\n  \"naslov\": \"iPhone 14 Pro – ZNIŽANO\",\n  \"cena\": 680\n}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/posodobiOglas",
-              "host": ["{{BASE_URL}}"],
-              "path": ["posodobiOglas"]
-            },
-            "description": "Posodobi oglas. Dovoljeno samo lastniku. Zahteva JWT token."
-          }
-        },
-        {
-          "name": "2e. Izbriši oglas (DELETE)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{TOKEN}}"
-              }
-            ],
-            "url": {
-              "raw": "{{BASE_URL}}/izbrisiOglas?id={{OGLAS_ID}}",
-              "host": ["{{BASE_URL}}"],
-              "path": ["izbrisiOglas"],
-              "query": [
-                {
-                  "key": "id",
-                  "value": "{{OGLAS_ID}}"
-                }
-              ]
-            },
-            "description": "Izbriše oglas. Dovoljeno samo lastniku. Zahteva JWT token."
-          }
-        },
-        {
-          "name": "2f. [401] Objavi oglas brez tokena",
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"naslov\": \"Test brez auth\",\n  \"opis\": \"To mora vrniti 401.\",\n  \"cena\": 10,\n  \"kategorija\": \"ostalo\"\n}"
+              "raw": "{\n  \"data\": {\n    \"naslov\": \"iPhone 14 Pro – odlično stanje\",\n    \"opis\": \"Malo rabljen, brez praske. Komplet z originalno škatlo.\",\n    \"cena\": 750,\n    \"kategorija\": \"elektronika\"\n  }\n}"
             },
             "url": {
               "raw": "{{BASE_URL}}/objavaOglasa",
               "host": ["{{BASE_URL}}"],
               "path": ["objavaOglasa"]
             },
-            "description": "Pričakovani odgovor: 401 Unauthorized – manjka Authorization header."
+            "description": "onCall – ustvari oglas. ID se shrani v OGLAS_ID."
+          }
+        },
+        {
+          "name": "2d. Posodobi oglas (onCall)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"id\": \"{{OGLAS_ID}}\",\n    \"naslov\": \"iPhone 14 Pro – ZNIŽANO\",\n    \"cena\": 680\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/posodobiOglas",
+              "host": ["{{BASE_URL}}"],
+              "path": ["posodobiOglas"]
+            },
+            "description": "onCall – posodobi oglas. Dovoljeno samo lastniku."
+          }
+        },
+        {
+          "name": "2e. Izbriši oglas (onCall)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"id\": \"{{OGLAS_ID}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/izbrisiOglas",
+              "host": ["{{BASE_URL}}"],
+              "path": ["izbrisiOglas"]
+            },
+            "description": "onCall – izbriše oglas. Dovoljeno samo lastniku."
+          }
+        },
+        {
+          "name": "2f. [401] Objavi oglas brez tokena",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"naslov\": \"Test brez auth\",\n    \"opis\": \"Mora vrniti unauthenticated.\",\n    \"cena\": 10,\n    \"kategorija\": \"ostalo\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/objavaOglasa",
+              "host": ["{{BASE_URL}}"],
+              "path": ["objavaOglasa"]
+            },
+            "description": "Pričakovano: napaka unauthenticated."
           }
         }
       ]
     },
     {
-      "name": "3. Sporočanje",
+      "name": "3. Sporočanje (onCall)",
       "item": [
         {
-          "name": "3a. Pošlji sporočilo (POST)",
+          "name": "3a. Pošlji sporočilo",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{TOKEN}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"oglasId\": \"{{OGLAS_ID}}\",\n  \"vsebina\": \"Pozdravljeni, ali je artikel še na voljo?\"\n}"
+              "raw": "{\n  \"data\": {\n    \"oglasId\": \"{{OGLAS_ID}}\",\n    \"vsebina\": \"Pozdravljeni, ali je artikel še na voljo?\"\n  }\n}"
             },
             "url": {
               "raw": "{{BASE_URL}}/posljiSporocilo",
               "host": ["{{BASE_URL}}"],
               "path": ["posljiSporocilo"]
             },
-            "description": "Pošlje sporočilo prodajalcu. Zahteva JWT token kupca (ne lastnika oglasa)."
+            "description": "onCall – pošlje sporočilo prodajalcu."
           }
         },
         {
-          "name": "3b. Pridobi sporočila za oglas (GET)",
+          "name": "3b. Pridobi sporočila",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{TOKEN}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" }
             ],
-            "url": {
-              "raw": "{{BASE_URL}}/pridobiSporocila?oglasId={{OGLAS_ID}}",
-              "host": ["{{BASE_URL}}"],
-              "path": ["pridobiSporocila"],
-              "query": [
-                {
-                  "key": "oglasId",
-                  "value": "{{OGLAS_ID}}"
-                }
-              ]
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"oglasId\": \"{{OGLAS_ID}}\"\n  }\n}"
             },
-            "description": "Vrne vsa sporočila za oglas. Dostopno samo lastniku oglasa. Zahteva JWT token."
+            "url": {
+              "raw": "{{BASE_URL}}/pridobiSporocila",
+              "host": ["{{BASE_URL}}"],
+              "path": ["pridobiSporocila"]
+            },
+            "description": "onCall – vrne sporočila za oglas. Samo lastnik oglasa."
           }
         }
       ]
