@@ -1,0 +1,18 @@
+$kind: http-request
+description: onCall – posodobi ime, telefon, lokacijo.
+url: "{{BASE_URL}}/posodobiProfil"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{TOKEN}}
+body:
+  type: text
+  content: |-
+    {
+      "data": {
+        "ime": "Ana Novak",
+        "telefon": "041 123 456",
+        "lokacija": "Ljubljana"
+      }
+    }
+order: 2000

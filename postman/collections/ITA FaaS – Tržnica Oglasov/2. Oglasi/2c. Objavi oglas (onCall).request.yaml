@@ -1,0 +1,25 @@
+$kind: http-request
+description: onCall – ustvari oglas. ID se shrani v OGLAS_ID.
+url: "{{BASE_URL}}/objavaOglasa"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{TOKEN}}
+body:
+  type: text
+  content: |-
+    {
+      "data": {
+        "naslov": "iPhone 14 Pro – odlično stanje",
+        "opis": "Malo rabljen, brez praske. Komplet z originalno škatlo.",
+        "cena": 750,
+        "kategorija": "elektronika"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      var r = pm.response.json();
+      if (r.result && r.result.id) { pm.collectionVariables.set('OGLAS_ID', r.result.id); pm.test('OGLAS_ID shranjen', () => pm.expect(r.result.id).to.be.a('string')); }
+    language: text/javascript
+order: 3000

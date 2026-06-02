@@ -1,0 +1,7 @@
+$kind: http-request
+description: onRequest – javni endpoint.
+url: "{{BASE_URL}}/pridobiOglas?id={{OGLAS_ID}}"
+method: GET
+queryParams:
+  id: "{{OGLAS_ID}}"
+order: 2000

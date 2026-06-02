@@ -1,0 +1,18 @@
+$kind: http-request
+description: "Pričakovano: napaka unauthenticated."
+url: "{{BASE_URL}}/objavaOglasa"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "data": {
+        "naslov": "Test brez auth",
+        "opis": "Mora vrniti unauthenticated.",
+        "cena": 10,
+        "kategorija": "ostalo"
+      }
+    }
+order: 6000

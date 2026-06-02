@@ -1,0 +1,5 @@
+$kind: http-request
+description: onRequest – javni endpoint, ne zahteva tokena.
+url: "{{BASE_URL}}/pridobiOglase"
+method: GET
+order: 1000

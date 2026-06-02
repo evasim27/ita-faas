@@ -1,0 +1,16 @@
+$kind: http-request
+description: onCall – izbriše oglas. Dovoljeno samo lastniku.
+url: "{{BASE_URL}}/izbrisiOglas"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{TOKEN}}
+body:
+  type: text
+  content: |-
+    {
+      "data": {
+        "id": "{{OGLAS_ID}}"
+      }
+    }
+order: 5000

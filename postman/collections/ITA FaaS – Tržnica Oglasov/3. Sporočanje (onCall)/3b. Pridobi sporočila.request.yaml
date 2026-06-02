@@ -1,0 +1,16 @@
+$kind: http-request
+description: onCall – vrne sporočila za oglas. Samo lastnik oglasa.
+url: "{{BASE_URL}}/pridobiSporocila"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{TOKEN}}
+body:
+  type: text
+  content: |-
+    {
+      "data": {
+        "oglasId": "{{OGLAS_ID}}"
+      }
+    }
+order: 2000

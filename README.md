@@ -129,7 +129,7 @@ cd functions
 npm install
 
 # Zagon vseh emulatorjev (functions, firestore, auth, storage, pubsub)
-firebase emulators:start
+firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data
 ```
 
 Emulator UI: http://localhost:4000  

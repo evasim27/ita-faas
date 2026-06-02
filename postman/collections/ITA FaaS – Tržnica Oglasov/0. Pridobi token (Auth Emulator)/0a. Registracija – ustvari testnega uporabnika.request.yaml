@@ -1,0 +1,23 @@
+$kind: http-request
+description: Ustvari novega uporabnika v Auth Emulatorju in shrani token v spremenljivko TOKEN.
+url: "{{AUTH_URL}}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key"
+method: POST
+headers:
+  Content-Type: application/json
+queryParams:
+  key: fake-api-key
+body:
+  type: text
+  content: |-
+    {
+      "email": "test@test.com",
+      "password": "geslo123",
+      "returnSecureToken": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      var r = pm.response.json();
+      if (r.idToken) { pm.collectionVariables.set('TOKEN', r.idToken); pm.test('Token shranjen', () => pm.expect(r.idToken).to.be.a('string')); }
+    language: text/javascript
+order: 1000

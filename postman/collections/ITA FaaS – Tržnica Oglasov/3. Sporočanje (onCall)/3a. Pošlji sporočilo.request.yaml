@@ -1,0 +1,17 @@
+$kind: http-request
+description: onCall – pošlje sporočilo prodajalcu.
+url: "{{BASE_URL}}/posljiSporocilo"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{TOKEN}}
+body:
+  type: text
+  content: |-
+    {
+      "data": {
+        "oglasId": "{{OGLAS_ID}}",
+        "vsebina": "Pozdravljeni, ali je artikel še na voljo?"
+      }
+    }
+order: 1000

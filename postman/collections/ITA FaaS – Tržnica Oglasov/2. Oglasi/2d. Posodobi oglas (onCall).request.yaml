@@ -1,0 +1,18 @@
+$kind: http-request
+description: onCall – posodobi oglas. Dovoljeno samo lastniku.
+url: "{{BASE_URL}}/posodobiOglas"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{TOKEN}}
+body:
+  type: text
+  content: |-
+    {
+      "data": {
+        "id": "{{OGLAS_ID}}",
+        "naslov": "iPhone 14 Pro – ZNIŽANO",
+        "cena": 680
+      }
+    }
+order: 4000

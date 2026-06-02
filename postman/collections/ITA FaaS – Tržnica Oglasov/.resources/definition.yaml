@@ -1,0 +1,13 @@
+$kind: collection
+description: |-
+  Testiranje Firebase Cloud Functions.
+
+  BASE_URL = http://127.0.0.1:5001/ita-faas-3fd3b/us-central1
+
+  onRequest funkcije: navaden HTTP klic
+  onCall funkcije: POST z { data: {...} } in Bearer token
+variables:
+  BASE_URL: http://127.0.0.1:5001/ita-faas-3fd3b/us-central1
+  AUTH_URL: http://127.0.0.1:9099
+  TOKEN: ""
+  OGLAS_ID: ""
