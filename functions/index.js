@@ -6,8 +6,11 @@ const { onMessagePublished } = require("firebase-functions/v2/pubsub");
 const { beforeUserCreated } = require("firebase-functions/v2/identity");
 const admin = require("firebase-admin");
 
-admin.initializeApp();
+admin.initializeApp({
+  storageBucket: "ita-faas-3fd3b.appspot.com",
+});
 const db = admin.firestore();
+const BUCKET = "ita-faas-3fd3b.appspot.com";
 
 // ─────────────────────────────────────────────
 // POMOŽNA FUNKCIJA – Preveri JWT token
@@ -335,7 +338,7 @@ exports.obdelajSporociloPubSub = onMessagePublished("nova-sporocila", async (eve
 // ═════════════════════════════════════════════
 
 // 4a. STORAGE TRIGGER – Ob nalaganju slike shrani URL v oglas
-exports.obdelavaSlikeOglasa = onObjectFinalized(async (event) => {
+exports.obdelavaSlikeOglasa = onObjectFinalized({ bucket: BUCKET }, async (event) => {
   const filePath = event.data.name;
   const contentType = event.data.contentType;
 
@@ -362,7 +365,7 @@ exports.obdelavaSlikeOglasa = onObjectFinalized(async (event) => {
 // 4b. FIRESTORE TRIGGER – Ko se oglas izbriše, pobriše vse njegove slike
 exports.obrisaniOglasCistiSlike = onDocumentDeleted("oglasi/{oglasId}", async (event) => {
   const oglasId = event.params.oglasId;
-  const bucket = admin.storage().bucket();
+  const bucket = admin.storage().bucket(BUCKET);
 
   try {
     const [files] = await bucket.getFiles({ prefix: `oglasi/${oglasId}/` });
