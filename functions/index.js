@@ -32,15 +32,20 @@ async function verifyToken(req) {
 // 1a. AUTH TRIGGER – Ob registraciji ustvari profil
 exports.noviUporabnik = beforeUserCreated(async (event) => {
   const user = event.data;
-  await db.collection("uporabniki").doc(user.uid).set({
-    email: user.email,
-    ime: user.displayName || "Neznan uporabnik",
-    telefon: "",
-    lokacija: "",
-    ustvarjen: admin.firestore.FieldValue.serverTimestamp(),
-    aktiven: true,
-  });
-  console.log(`Nov uporabnik registriran: ${user.email}`);
+  try {
+    await db.collection("uporabniki").doc(user.uid).set({
+      email: user.email || "",
+      ime: user.displayName || "Neznan uporabnik",
+      telefon: "",
+      lokacija: "",
+      ustvarjen: admin.firestore.FieldValue.serverTimestamp(),
+      aktiven: true,
+    });
+    console.log(`Nov uporabnik registriran: ${user.email}`);
+  } catch (err) {
+    // Logiramo napako, a ne blokiramo registracije
+    console.error("Napaka pri ustvarjanju profila:", err.message);
+  }
 });
 
 // 1b. CALLABLE – Pridobi profil prijavljenega uporabnika
