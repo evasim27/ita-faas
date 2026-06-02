@@ -1,4 +1,4 @@
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentDeleted } = require("firebase-functions/v2/firestore");
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
@@ -43,47 +43,31 @@ exports.noviUporabnik = beforeUserCreated(async (event) => {
   console.log(`Nov uporabnik registriran: ${user.email}`);
 });
 
-// 1b. HTTP GET – Pridobi profil prijavljenega uporabnika
-exports.pridobiProfil = onRequest(async (req, res) => {
-  if (req.method !== "GET") return res.status(405).json({ error: "Samo GET." });
+// 1b. CALLABLE – Pridobi profil prijavljenega uporabnika
+exports.pridobiProfil = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  let decoded;
-  try { decoded = await verifyToken(req); }
-  catch (e) { return res.status(401).json({ error: e.message }); }
-
-  try {
-    const doc = await db.collection("uporabniki").doc(decoded.uid).get();
-    if (!doc.exists) return res.status(404).json({ error: "Profil ne obstaja." });
-    return res.status(200).json({ uid: decoded.uid, ...doc.data() });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+  const doc = await db.collection("uporabniki").doc(request.auth.uid).get();
+  if (!doc.exists) throw new HttpsError("not-found", "Profil ne obstaja.");
+  return { uid: request.auth.uid, ...doc.data() };
 });
 
-// 1c. HTTP PUT – Posodobi profil (ime, telefon, lokacija)
-exports.posodobiProfil = onRequest(async (req, res) => {
-  if (req.method !== "PUT") return res.status(405).json({ error: "Samo PUT." });
+// 1c. CALLABLE – Posodobi profil (ime, telefon, lokacija)
+exports.posodobiProfil = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  let decoded;
-  try { decoded = await verifyToken(req); }
-  catch (e) { return res.status(401).json({ error: e.message }); }
-
-  const { ime, telefon, lokacija } = req.body;
+  const { ime, telefon, lokacija } = request.data;
   const posodobitve = {};
   if (ime) posodobitve.ime = ime;
   if (telefon) posodobitve.telefon = telefon;
   if (lokacija) posodobitve.lokacija = lokacija;
 
   if (Object.keys(posodobitve).length === 0) {
-    return res.status(400).json({ error: "Ni polj za posodobitev." });
+    throw new HttpsError("invalid-argument", "Ni polj za posodobitev.");
   }
 
-  try {
-    await db.collection("uporabniki").doc(decoded.uid).update(posodobitve);
-    return res.status(200).json({ message: "Profil posodobljen." });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+  await db.collection("uporabniki").doc(request.auth.uid).update(posodobitve);
+  return { message: "Profil posodobljen." };
 });
 
 // ═════════════════════════════════════════════
@@ -91,34 +75,26 @@ exports.posodobiProfil = onRequest(async (req, res) => {
 // Event tipi: HTTP, Firestore (onDocumentCreated)
 // ═════════════════════════════════════════════
 
-// 2a. HTTP POST – Ustvari oglas (zahteva JWT)
-exports.objavaOglasa = onRequest(async (req, res) => {
-  if (req.method !== "POST") return res.status(405).json({ error: "Samo POST." });
+// 2a. CALLABLE – Ustvari oglas
+exports.objavaOglasa = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  let decoded;
-  try { decoded = await verifyToken(req); }
-  catch (e) { return res.status(401).json({ error: e.message }); }
-
-  const { naslov, opis, cena, kategorija } = req.body;
+  const { naslov, opis, cena, kategorija } = request.data;
   if (!naslov || !opis || !cena || !kategorija) {
-    return res.status(400).json({ error: "Polja naslov, opis, cena in kategorija so obvezna." });
+    throw new HttpsError("invalid-argument", "Polja naslov, opis, cena in kategorija so obvezna.");
   }
 
-  try {
-    const ref = await db.collection("oglasi").add({
-      naslov,
-      opis,
-      cena: Number(cena),
-      kategorija,
-      userId: decoded.uid,
-      ustvarjen: admin.firestore.FieldValue.serverTimestamp(),
-      aktiven: true,
-      slikaUrl: null,
-    });
-    return res.status(201).json({ message: "Oglas objavljen.", id: ref.id });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+  const ref = await db.collection("oglasi").add({
+    naslov,
+    opis,
+    cena: Number(cena),
+    kategorija,
+    userId: request.auth.uid,
+    ustvarjen: admin.firestore.FieldValue.serverTimestamp(),
+    aktiven: true,
+    slikaUrl: null,
+  });
+  return { message: "Oglas objavljen.", id: ref.id };
 });
 
 // 2b. HTTP GET – Pridobi vse aktivne oglase
@@ -153,59 +129,43 @@ exports.pridobiOglas = onRequest(async (req, res) => {
   }
 });
 
-// 2d. HTTP PUT – Posodobi oglas (samo lastnik)
-exports.posodobiOglas = onRequest(async (req, res) => {
-  if (req.method !== "PUT") return res.status(405).json({ error: "Samo PUT." });
+// 2d. CALLABLE – Posodobi oglas (samo lastnik)
+exports.posodobiOglas = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  let decoded;
-  try { decoded = await verifyToken(req); }
-  catch (e) { return res.status(401).json({ error: e.message }); }
+  const { id, naslov, opis, cena } = request.data;
+  if (!id) throw new HttpsError("invalid-argument", "Parameter id je obvezen.");
 
-  const { id, naslov, opis, cena } = req.body;
-  if (!id) return res.status(400).json({ error: "Parameter id je obvezen." });
-
-  try {
-    const doc = await db.collection("oglasi").doc(id).get();
-    if (!doc.exists) return res.status(404).json({ error: "Oglas ne obstaja." });
-    if (doc.data().userId !== decoded.uid) {
-      return res.status(403).json({ error: "Nimate pravice urejati tega oglasa." });
-    }
-
-    const posodobitve = {};
-    if (naslov) posodobitve.naslov = naslov;
-    if (opis) posodobitve.opis = opis;
-    if (cena) posodobitve.cena = Number(cena);
-
-    await db.collection("oglasi").doc(id).update(posodobitve);
-    return res.status(200).json({ message: "Oglas posodobljen." });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  const doc = await db.collection("oglasi").doc(id).get();
+  if (!doc.exists) throw new HttpsError("not-found", "Oglas ne obstaja.");
+  if (doc.data().userId !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "Nimate pravice urejati tega oglasa.");
   }
+
+  const posodobitve = {};
+  if (naslov) posodobitve.naslov = naslov;
+  if (opis) posodobitve.opis = opis;
+  if (cena) posodobitve.cena = Number(cena);
+
+  await db.collection("oglasi").doc(id).update(posodobitve);
+  return { message: "Oglas posodobljen." };
 });
 
-// 2e. HTTP DELETE – Izbriši oglas (samo lastnik)
-exports.izbrisiOglas = onRequest(async (req, res) => {
-  if (req.method !== "DELETE") return res.status(405).json({ error: "Samo DELETE." });
+// 2e. CALLABLE – Izbriši oglas (samo lastnik)
+exports.izbrisiOglas = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  let decoded;
-  try { decoded = await verifyToken(req); }
-  catch (e) { return res.status(401).json({ error: e.message }); }
+  const { id } = request.data;
+  if (!id) throw new HttpsError("invalid-argument", "Parameter id je obvezen.");
 
-  const { id } = req.query;
-  if (!id) return res.status(400).json({ error: "Parameter id je obvezen." });
-
-  try {
-    const doc = await db.collection("oglasi").doc(id).get();
-    if (!doc.exists) return res.status(404).json({ error: "Oglas ne obstaja." });
-    if (doc.data().userId !== decoded.uid) {
-      return res.status(403).json({ error: "Nimate pravice brisati tega oglasa." });
-    }
-
-    await db.collection("oglasi").doc(id).delete();
-    return res.status(200).json({ message: "Oglas izbrisan." });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  const doc = await db.collection("oglasi").doc(id).get();
+  if (!doc.exists) throw new HttpsError("not-found", "Oglas ne obstaja.");
+  if (doc.data().userId !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "Nimate pravice brisati tega oglasa.");
   }
+
+  await db.collection("oglasi").doc(id).delete();
+  return { message: "Oglas izbrisan." };
 });
 
 // 2f. FIRESTORE TRIGGER – Ob novem oglasu posodobi statistiko kategorije
@@ -230,67 +190,50 @@ exports.statistikaObNovemOglasu = onDocumentCreated("oglasi/{oglasId}", async (e
 // Event tipi: HTTP, Firestore (onDocumentCreated), Pub/Sub
 // ═════════════════════════════════════════════
 
-// 3a. HTTP POST – Pošlji sporočilo prodajalcu (zahteva JWT)
-exports.posljiSporocilo = onRequest(async (req, res) => {
-  if (req.method !== "POST") return res.status(405).json({ error: "Samo POST." });
+// 3a. CALLABLE – Pošlji sporočilo prodajalcu
+exports.posljiSporocilo = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  let decoded;
-  try { decoded = await verifyToken(req); }
-  catch (e) { return res.status(401).json({ error: e.message }); }
-
-  const { oglasId, vsebina } = req.body;
+  const { oglasId, vsebina } = request.data;
   if (!oglasId || !vsebina) {
-    return res.status(400).json({ error: "Polja oglasId in vsebina sta obvezni." });
+    throw new HttpsError("invalid-argument", "Polja oglasId in vsebina sta obvezni.");
   }
 
-  try {
-    const oglasDoc = await db.collection("oglasi").doc(oglasId).get();
-    if (!oglasDoc.exists) return res.status(404).json({ error: "Oglas ne obstaja." });
-    if (oglasDoc.data().userId === decoded.uid) {
-      return res.status(400).json({ error: "Ne morete pisati sami sebi." });
-    }
-
-    const ref = await db.collection("sporocila").add({
-      oglasId,
-      posiljatelj: decoded.uid,
-      posiljateljEmail: decoded.email,
-      vsebina,
-      poslano: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    return res.status(201).json({ message: "Sporočilo poslano.", id: ref.id });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  const oglasDoc = await db.collection("oglasi").doc(oglasId).get();
+  if (!oglasDoc.exists) throw new HttpsError("not-found", "Oglas ne obstaja.");
+  if (oglasDoc.data().userId === request.auth.uid) {
+    throw new HttpsError("invalid-argument", "Ne morete pisati sami sebi.");
   }
+
+  const ref = await db.collection("sporocila").add({
+    oglasId,
+    posiljatelj: request.auth.uid,
+    posiljateljEmail: request.auth.token.email,
+    vsebina,
+    poslano: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { message: "Sporočilo poslano.", id: ref.id };
 });
 
-// 3b. HTTP GET – Pridobi sporočila za oglas (samo lastnik)
-exports.pridobiSporocila = onRequest(async (req, res) => {
-  if (req.method !== "GET") return res.status(405).json({ error: "Samo GET." });
+// 3b. CALLABLE – Pridobi sporočila za oglas (samo lastnik)
+exports.pridobiSporocila = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  let decoded;
-  try { decoded = await verifyToken(req); }
-  catch (e) { return res.status(401).json({ error: e.message }); }
+  const { oglasId } = request.data;
+  if (!oglasId) throw new HttpsError("invalid-argument", "Parameter oglasId je obvezen.");
 
-  const { oglasId } = req.query;
-  if (!oglasId) return res.status(400).json({ error: "Parameter oglasId je obvezen." });
-
-  try {
-    const oglasDoc = await db.collection("oglasi").doc(oglasId).get();
-    if (!oglasDoc.exists) return res.status(404).json({ error: "Oglas ne obstaja." });
-    if (oglasDoc.data().userId !== decoded.uid) {
-      return res.status(403).json({ error: "Dostop zavrnjen." });
-    }
-
-    const snapshot = await db.collection("sporocila")
-      .where("oglasId", "==", oglasId)
-      .orderBy("poslano", "asc")
-      .get();
-
-    const sporocila = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return res.status(200).json(sporocila);
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  const oglasDoc = await db.collection("oglasi").doc(oglasId).get();
+  if (!oglasDoc.exists) throw new HttpsError("not-found", "Oglas ne obstaja.");
+  if (oglasDoc.data().userId !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "Dostop zavrnjen.");
   }
+
+  const snapshot = await db.collection("sporocila")
+    .where("oglasId", "==", oglasId)
+    .orderBy("poslano", "asc")
+    .get();
+
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 });
 
 // 3c. FIRESTORE TRIGGER – Ob novem sporočilu ustvari obvestilo za prodajalca
