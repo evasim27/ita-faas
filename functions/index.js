@@ -154,7 +154,7 @@ exports.pridobiOglas = onRequest(async (req, res) => {
 exports.posodobiOglas = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  const { id, naslov, opis, cena } = request.data;
+  const { id, naslov, opis, cena, slikaUrl } = request.data;
   if (!id) throw new HttpsError("invalid-argument", "Parameter id je obvezen.");
 
   const doc = await db.collection("oglasi").doc(id).get();
@@ -167,6 +167,7 @@ exports.posodobiOglas = onCall(async (request) => {
   if (naslov) posodobitve.naslov = naslov;
   if (opis) posodobitve.opis = opis;
   if (cena) posodobitve.cena = Number(cena);
+  if (slikaUrl) posodobitve.slikaUrl = slikaUrl;
 
   await db.collection("oglasi").doc(id).update(posodobitve);
   return { message: "Oglas posodobljen." };

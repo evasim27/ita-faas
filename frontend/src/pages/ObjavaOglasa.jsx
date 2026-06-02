@@ -31,9 +31,10 @@ export default function ObjavaOglasa() {
       const res = await call('objavaOglasa')({ naslov, opis, cena: Number(cena), kategorija })
       const oglasId = res.data.id
 
-      // 2. Naloži sliko (če je izbrana) — Storage trigger jo bo samodejno vezal na oglas
+      // 2. Naloži sliko in takoj shrani URL v oglas
       if (slika) {
-        await naloziSliko(oglasId, slika)
+        const slikaUrl = await naloziSliko(oglasId, slika)
+        await call('posodobiOglas')({ id: oglasId, slikaUrl })
       }
 
       navigate(`/oglas/${oglasId}`)

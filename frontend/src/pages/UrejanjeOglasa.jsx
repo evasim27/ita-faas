@@ -46,8 +46,9 @@ export default function UrejanjeOglasa() {
     setNapaka('')
     setLoading(true)
     try {
-      await call('posodobiOglas')({ id, naslov, opis, cena: Number(cena) })
-      if (novaSlikaFile) await naloziSliko(id, novaSlikaFile)
+      let slikaUrl
+      if (novaSlikaFile) slikaUrl = await naloziSliko(id, novaSlikaFile)
+      await call('posodobiOglas')({ id, naslov, opis, cena: Number(cena), ...(slikaUrl && { slikaUrl }) })
       navigate(`/oglas/${id}`)
     } catch (err) {
       setNapaka(err.message || 'Napaka pri shranjevanju.')
