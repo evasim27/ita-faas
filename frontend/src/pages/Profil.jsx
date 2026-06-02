@@ -4,79 +4,126 @@ import { signOut } from 'firebase/auth'
 import { auth, call, BASE_URL, formatDate } from '../firebase'
 import { useAuth } from '../App'
 
-function SporocilaZavihek() {
-  const [sporocila, setSporocila] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [odgovori, setOdgovori] = useState({}) // sporociloId → vsebina
-  const [statusi, setStatusi] = useState({})   // sporociloId → 'ok'|'err'
+const balonStyle = (moj) => ({
+  maxWidth: '75%',
+  padding: '8px 12px',
+  background: moj ? '#111' : '#fff',
+  color: moj ? '#fff' : '#111',
+  border: '1.5px solid #111',
+  fontSize: '0.88rem',
+  lineHeight: 1.5,
+  alignSelf: moj ? 'flex-end' : 'flex-start',
+})
 
-  useEffect(() => {
-    call('pridobiVsaSporocila')({})
-      .then(res => { setSporocila(res.data || []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
+function KonverzacijaBlok({ sporocilo, jeLastnik }) {
+  const [odgovorVsebina, setOdgovorVsebina] = useState('')
+  const [status, setStatus] = useState('')
 
-  const posljiOdgovor = async (sporociloId) => {
-    const vsebina = odgovori[sporociloId]
-    if (!vsebina?.trim()) return
+  const poslji = async () => {
+    if (!odgovorVsebina.trim()) return
     try {
-      await call('odgovoriNaSporocilo')({ sporociloId, vsebina })
-      setStatusi(s => ({ ...s, [sporociloId]: 'ok' }))
-      setOdgovori(o => ({ ...o, [sporociloId]: '' }))
-    } catch (err) {
-      setStatusi(s => ({ ...s, [sporociloId]: 'err' }))
-    }
+      await call('odgovoriNaSporocilo')({ sporociloId: sporocilo.id, vsebina: odgovorVsebina })
+      setStatus('ok')
+      setOdgovorVsebina('')
+    } catch { setStatus('err') }
   }
 
-  if (loading) return <div className="loading">Nalaganje sporočil...</div>
-  if (sporocila.length === 0) return <div className="prazno"><p>Ni prejetih sporočil.</p></div>
+  return (
+    <div style={{ padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
+      <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '8px' }}>
+        {sporocilo.posiljateljEmail} · {formatDate(sporocilo.poslano)}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        {/* Originalno sporočilo — levo */}
+        <div style={{ display: 'flex' }}>
+          <div style={balonStyle(false)}>{sporocilo.vsebina}</div>
+        </div>
+        {/* Odgovori */}
+        {(sporocilo.odgovori || []).map(o => (
+          <div key={o.id} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={balonStyle(true)}>{o.vsebina}</div>
+          </div>
+        ))}
+      </div>
+      {jeLastnik && (
+        <>
+          {status === 'ok' && <p className="uspeh" style={{ marginBottom: '8px' }}>Odgovor poslan.</p>}
+          {status === 'err' && <p className="napaka" style={{ marginBottom: '8px' }}>Napaka.</p>}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input type="text" placeholder="Odgovori..."
+              value={odgovorVsebina}
+              onChange={e => setOdgovorVsebina(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && poslji()}
+              style={{ flex: 1, padding: '8px 10px', border: '1.5px solid #111', fontSize: '0.85rem', fontFamily: 'inherit' }} />
+            <button className="btn btn-primary" onClick={poslji} style={{ padding: '8px 16px', fontSize: '0.82rem' }}>Pošlji</button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
-  // Grupiramo po oglasu
-  const poOglasih = sporocila.reduce((acc, s) => {
-    const key = s.oglasId
-    if (!acc[key]) acc[key] = { naslov: s.oglasNaslov, sporocila: [] }
-    acc[key].sporocila.push(s)
+function SporocilaZavihek() {
+  const [podZavihek, setPodZavihek] = useState('prejeto')
+  const [prejeto, setPrejeto] = useState([])
+  const [poslano, setPoslano] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      call('pridobiVsaSporocila')({}),
+      call('pridobiPoslanaSporocila')({}),
+    ]).then(([r1, r2]) => {
+      setPrejeto(r1.data || [])
+      setPoslano(r2.data || [])
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  const grupirajPoOglasu = (sporocila) => sporocila.reduce((acc, s) => {
+    if (!acc[s.oglasId]) acc[s.oglasId] = { naslov: s.oglasNaslov, sporocila: [] }
+    acc[s.oglasId].sporocila.push(s)
     return acc
   }, {})
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {Object.entries(poOglasih).map(([oglasId, skupina]) => (
-        <div key={oglasId} style={{ border: '1.5px solid #111', background: '#fff' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1.5px solid #111', background: '#f4f2ee' }}>
-            <Link to={`/oglas/${oglasId}`} style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111', textDecoration: 'none' }}>
-              {skupina.naslov || 'Oglas'}
-            </Link>
-          </div>
-          {skupina.sporocila.map(s => (
-            <div key={s.id} style={{ padding: '16px', borderBottom: '1px solid #eee' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{s.posiljateljEmail}</span>
-                <span style={{ fontSize: '0.75rem', color: '#999' }}>{formatDate(s.poslano)}</span>
-              </div>
-              <p style={{ fontSize: '0.9rem', color: '#333', marginBottom: '12px' }}>{s.vsebina}</p>
+  if (loading) return <div className="loading">Nalaganje...</div>
 
-              {statusi[s.id] === 'ok' && <p className="uspeh" style={{ marginBottom: '8px' }}>Odgovor poslan.</p>}
-              {statusi[s.id] === 'err' && <p className="napaka" style={{ marginBottom: '8px' }}>Napaka pri pošiljanju.</p>}
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  placeholder="Odgovori..."
-                  value={odgovori[s.id] || ''}
-                  onChange={e => setOdgovori(o => ({ ...o, [s.id]: e.target.value }))}
-                  onKeyDown={e => e.key === 'Enter' && posljiOdgovor(s.id)}
-                  style={{ flex: 1, padding: '8px 10px', border: '1.5px solid #111', fontSize: '0.85rem', fontFamily: 'inherit' }}
-                />
-                <button className="btn btn-primary" onClick={() => posljiOdgovor(s.id)}
-                  style={{ padding: '8px 16px', fontSize: '0.82rem' }}>
-                  Pošlji
-                </button>
-              </div>
+  const renderGrupe = (sporocila, jeLastnik) => {
+    const grupe = grupirajPoOglasu(sporocila)
+    if (Object.keys(grupe).length === 0) return <div className="prazno"><p>Ni sporočil.</p></div>
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {Object.entries(grupe).map(([oglasId, skupina]) => (
+          <div key={oglasId} style={{ border: '1.5px solid #111', background: '#fff' }}>
+            <div style={{ padding: '10px 16px', borderBottom: '1.5px solid #111', background: '#f4f2ee' }}>
+              <Link to={`/oglas/${oglasId}`} style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111', textDecoration: 'none' }}>
+                {skupina.naslov || 'Oglas'}
+              </Link>
             </div>
-          ))}
-        </div>
-      ))}
+            {skupina.sporocila.map(s => (
+              <KonverzacijaBlok key={s.id} sporocilo={s} jeLastnik={jeLastnik} />
+            ))}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '0', marginBottom: '20px', borderBottom: '1.5px solid #111' }}>
+        {[['prejeto', 'Prejeto'], ['poslano', 'Poslano']].map(([k, l]) => (
+          <div key={k} onClick={() => setPodZavihek(k)}
+            style={{ padding: '8px 20px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+              borderBottom: podZavihek === k ? '2px solid #111' : '2px solid transparent',
+              color: podZavihek === k ? '#111' : '#aaa', marginBottom: '-1.5px' }}>
+            {l} {k === 'prejeto' ? `(${prejeto.length})` : `(${poslano.length})`}
+          </div>
+        ))}
+      </div>
+      {podZavihek === 'prejeto' && renderGrupe(prejeto, true)}
+      {podZavihek === 'poslano' && renderGrupe(poslano, false)}
     </div>
   )
 }

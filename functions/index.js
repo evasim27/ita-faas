@@ -280,7 +280,32 @@ exports.pridobiVsaSporocila = onCall(async (request) => {
   const sporocila = [];
   for (const chunk of chunks) {
     const snap = await db.collection("sporocila").where("oglasId", "in", chunk).orderBy("poslano", "desc").get();
-    snap.docs.forEach(d => sporocila.push({ id: d.id, oglasNaslov: oglasMap[d.data().oglasId] || "", ...d.data() }));
+    for (const d of snap.docs) {
+      const odgovoriSnap = await d.ref.collection("odgovori").orderBy("poslano", "asc").get();
+      const odgovori = odgovoriSnap.docs.map(o => ({ id: o.id, ...o.data() }));
+      sporocila.push({ id: d.id, oglasNaslov: oglasMap[d.data().oglasId] || "", odgovori, ...d.data() });
+    }
+  }
+
+  return sporocila;
+});
+
+// 3d2. CALLABLE – Pridobi sporočila ki jih je poslal kupec (+ odgovori prodajalca)
+exports.pridobiPoslanaSporocila = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
+
+  const snap = await db.collection("sporocila")
+    .where("posiljatelj", "==", request.auth.uid)
+    .orderBy("poslano", "desc")
+    .get();
+
+  const sporocila = [];
+  for (const d of snap.docs) {
+    const oglasDoc = await db.collection("oglasi").doc(d.data().oglasId).get();
+    const oglasNaslov = oglasDoc.exists ? oglasDoc.data().naslov : "Oglas";
+    const odgovoriSnap = await d.ref.collection("odgovori").orderBy("poslano", "asc").get();
+    const odgovori = odgovoriSnap.docs.map(o => ({ id: o.id, ...o.data() }));
+    sporocila.push({ id: d.id, oglasNaslov, odgovori, ...d.data() });
   }
 
   return sporocila;
