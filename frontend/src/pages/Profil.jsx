@@ -10,6 +10,7 @@ export default function Profil() {
   const [profil, setProfil] = useState(null)
   const [mojiOglasi, setMojiOglasi] = useState([])
   const [ime, setIme] = useState('')
+  const [priimek, setPriimek] = useState('')
   const [telefon, setTelefon] = useState('')
   const [lokacija, setLokacija] = useState('')
   const [status, setStatus] = useState('')
@@ -19,6 +20,7 @@ export default function Profil() {
     call('pridobiProfil')({}).then(res => {
       setProfil(res.data)
       setIme(res.data.ime || '')
+      setPriimek(res.data.priimek || '')
       setTelefon(res.data.telefon || '')
       setLokacija(res.data.lokacija || '')
     }).catch(console.error)
@@ -35,7 +37,7 @@ export default function Profil() {
     e.preventDefault()
     setStatus('')
     try {
-      await call('posodobiProfil')({ ime, telefon, lokacija })
+      await call('posodobiProfil')({ ime, priimek, telefon, lokacija })
       setStatus('uspeh')
     } catch (err) {
       setStatus('napaka')
@@ -52,7 +54,7 @@ export default function Profil() {
       <div className="profil-header">
         <div className="profil-avatar">{user.email[0].toUpperCase()}</div>
         <div>
-          <h2>{profil?.ime || 'Moj profil'}</h2>
+          <h2>{profil?.ime && profil?.priimek ? `${profil.ime} ${profil.priimek}` : profil?.ime || 'Moj profil'}</h2>
           <p style={{ color: '#666', fontSize: '0.9rem' }}>{user.email}</p>
         </div>
         <button className="btn btn-secondary" onClick={odjava} style={{ marginLeft: 'auto' }}>Odjava</button>
@@ -68,8 +70,16 @@ export default function Profil() {
           {status === 'uspeh' && <p className="uspeh">✅ Profil posodobljen!</p>}
           {status === 'napaka' && <p className="napaka">Napaka pri posodabljanju.</p>}
           <form onSubmit={posodobiProfil}>
-            <label>Ime</label>
-            <input value={ime} onChange={e => setIme(e.target.value)} placeholder="Tvoje ime" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+              <div>
+                <label>Ime</label>
+                <input value={ime} onChange={e => setIme(e.target.value)} placeholder="Ana" />
+              </div>
+              <div>
+                <label>Priimek</label>
+                <input value={priimek} onChange={e => setPriimek(e.target.value)} placeholder="Novak" />
+              </div>
+            </div>
             <label>Telefon</label>
             <input value={telefon} onChange={e => setTelefon(e.target.value)} placeholder="041 123 456" />
             <label>Lokacija</label>

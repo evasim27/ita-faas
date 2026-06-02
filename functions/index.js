@@ -71,21 +71,23 @@ exports.pridobiProfil = onCall(async (request) => {
   return { uid: request.auth.uid, ...doc.data() };
 });
 
-// 1c. CALLABLE – Posodobi profil (ime, telefon, lokacija)
+// 1c. CALLABLE – Posodobi profil (ime, priimek, telefon, lokacija)
 exports.posodobiProfil = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  const { ime, telefon, lokacija } = request.data;
+  const { ime, priimek, telefon, lokacija } = request.data;
   const posodobitve = {};
-  if (ime) posodobitve.ime = ime;
-  if (telefon) posodobitve.telefon = telefon;
-  if (lokacija) posodobitve.lokacija = lokacija;
+  if (ime !== undefined) posodobitve.ime = ime;
+  if (priimek !== undefined) posodobitve.priimek = priimek;
+  if (telefon !== undefined) posodobitve.telefon = telefon;
+  if (lokacija !== undefined) posodobitve.lokacija = lokacija;
 
   if (Object.keys(posodobitve).length === 0) {
     throw new HttpsError("invalid-argument", "Ni polj za posodobitev.");
   }
 
-  await db.collection("uporabniki").doc(request.auth.uid).update(posodobitve);
+  // set z merge:true deluje tudi če dokument še ne obstaja
+  await db.collection("uporabniki").doc(request.auth.uid).set(posodobitve, { merge: true });
   return { message: "Profil posodobljen." };
 });
 

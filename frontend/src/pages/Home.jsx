@@ -48,7 +48,7 @@ export default function Home() {
             className={`filter-btn ${filter === k ? 'active' : ''}`}
             onClick={() => setFilter(k)}
           >
-            {k === 'vse' ? 'Vse' : `${IKONE[k]} ${k}`}
+            {k === 'vse' ? 'Vse' : k}
           </button>
         ))}
       </div>

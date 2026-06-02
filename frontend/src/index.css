@@ -2,7 +2,7 @@
 
 body {
   font-family: 'Segoe UI', Arial, sans-serif;
-  background: #fff;
+  background: #f4f2ee;
   color: #111;
 }
 
@@ -14,7 +14,7 @@ body {
 
 /* ── NAVIGACIJA ── */
 nav {
-  background: #fff;
+  background: #f4f2ee;
   border-bottom: 1px solid #e5e5e5;
   padding: 0 32px;
   display: flex;
@@ -248,7 +248,7 @@ nav .btn-objavi:hover { background: #333; }
 
 /* ── FORMA ── */
 .forma {
-  background: #fff;
+  background: #f4f2ee;
   max-width: 580px;
   margin: 0 auto;
 }
