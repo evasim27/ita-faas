@@ -26,56 +26,61 @@ export default function Home() {
 
   return (
     <div>
-      {/* Iskalna vrstica */}
-      <div style={{ marginBottom: '20px' }}>
-        <input
-          type="text"
-          placeholder="🔍 Išči oglase..."
-          value={iskanje}
-          onChange={e => setIskanje(e.target.value)}
-          style={{ width: '100%', padding: '12px 16px', border: '1.5px solid #ddd', borderRadius: '8px', fontSize: '1rem' }}
-        />
+      <div className="page-header">
+        <h1>Vsi oglasi</h1>
+        <span style={{ fontSize: '0.82rem', color: '#888' }}>{filtrirani.length} {filtrirani.length === 1 ? 'oglas' : 'oglasov'}</span>
       </div>
 
-      {/* Filter kategorij */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+      {/* Iskanje */}
+      <input
+        className="iskanje-vrstica"
+        type="text"
+        placeholder="Išči oglase..."
+        value={iskanje}
+        onChange={e => setIskanje(e.target.value)}
+      />
+
+      {/* Kategorije */}
+      <div className="filter-bar">
         {KATEGORIJE.map(k => (
           <button
             key={k}
-            className={`btn ${filter === k ? 'btn-primary' : 'btn-secondary'}`}
+            className={`filter-btn ${filter === k ? 'active' : ''}`}
             onClick={() => setFilter(k)}
-            style={{ padding: '6px 14px', fontSize: '0.85rem', textTransform: 'capitalize' }}
           >
-            {k === 'vse' ? 'Vse' : `${IKONE[k] || '📦'} ${k}`}
+            {k === 'vse' ? 'Vse' : `${IKONE[k]} ${k}`}
           </button>
         ))}
       </div>
 
-      {/* Mreža oglasov */}
+      {/* Mreža */}
       {loading ? (
-        <div className="loading">Nalaganje oglasov...</div>
+        <div className="loading">Nalaganje...</div>
       ) : filtrirani.length === 0 ? (
         <div className="prazno">
-          <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔎</div>
+          <div style={{ fontSize: '3rem' }}>🔎</div>
           <p>Ni oglasov{filter !== 'vse' ? ` v kategoriji "${filter}"` : ''}.</p>
         </div>
       ) : (
         <div className="grid">
           {filtrirani.map(oglas => (
-            <Link to={`/oglas/${oglas.id}`} key={oglas.id} className="kartica">
-              <div className="kartica-slika">
-                {oglas.slikaUrl
-                  ? <img src={oglas.slikaUrl} alt={oglas.naslov} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span>{IKONE[oglas.kategorija] || '📦'}</span>
-                }
-              </div>
-              <div className="kartica-body">
-                <div className="kartica-naslov">{oglas.naslov}</div>
-                <div className="kartica-cena">{oglas.cena} €</div>
-                <span className="kartica-kategorija">{oglas.kategorija}</span>
-                <div className="kartica-meta">📅 {formatDate(oglas.ustvarjen)}</div>
-              </div>
-            </Link>
+            <div key={oglas.id} className="kartica">
+              <Link to={`/oglas/${oglas.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="kartica-slika">
+                  {oglas.slikaUrl
+                    ? <img src={oglas.slikaUrl} alt={oglas.naslov} />
+                    : <span>{IKONE[oglas.kategorija] || '📦'}</span>
+                  }
+                </div>
+                <div className="kartica-body">
+                  <div className="kartica-kategorija">{oglas.kategorija}</div>
+                  <div className="kartica-naslov">{oglas.naslov}</div>
+                  <div className="kartica-cena">{oglas.cena} €</div>
+                  <div className="kartica-meta">{formatDate(oglas.ustvarjen)}</div>
+                </div>
+              </Link>
+              <Link to={`/oglas/${oglas.id}`} className="btn-kartica">Oglej si</Link>
+            </div>
           ))}
         </div>
       )}

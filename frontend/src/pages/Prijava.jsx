@@ -42,7 +42,7 @@ export default function Prijava() {
   }
 
   return (
-    <div style={{ paddingTop: '40px' }}>
+    <div className="prijava-wrap">
       <div className="forma">
         <div className="tabs">
           <div className={`tab ${zavihek === 'prijava' ? 'active' : ''}`} onClick={() => setZavihek('prijava')}>Prijava</div>

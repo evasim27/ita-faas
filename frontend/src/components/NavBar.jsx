@@ -14,7 +14,7 @@ export default function NavBar() {
 
   return (
     <nav>
-      <Link to="/" className="logo">🛒 Tržnica</Link>
+      <Link to="/" className="logo">Tržnica</Link>
       <div className="nav-links">
         <Link to="/">Oglasi</Link>
         {user ? (

@@ -36,56 +36,66 @@ export default function Oglas() {
     }
   }
 
-  if (loading) return <div className="loading">Nalaganje oglasa...</div>
+  if (loading) return <div className="loading">Nalaganje...</div>
   if (!oglas || oglas.error) return <div className="prazno">Oglas ne obstaja.</div>
 
   return (
-    <div className="oglas-detail">
-      {oglas.slikaUrl
-        ? <img src={oglas.slikaUrl} alt={oglas.naslov} className="oglas-slika" />
-        : <div style={{ background: '#f0f0f0', borderRadius: '8px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', marginBottom: '16px' }}>📦</div>
-      }
-
-      <span className="kartica-kategorija">{oglas.kategorija}</span>
-      <h1 style={{ marginTop: '8px' }}>{oglas.naslov}</h1>
-      <div className="oglas-cena">{oglas.cena} €</div>
-      <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '12px' }}>📅 Objavljeno: {formatDate(oglas.ustvarjen)}</p>
-      <p className="oglas-opis">{oglas.opis}</p>
-
-      {/* Gumba za lastnika */}
-      {user && user.uid === oglas.userId && (
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-          <Link to={`/uredi/${oglas.id}`} className="btn btn-secondary">✏️ Uredi oglas</Link>
+    <div>
+      <div className="oglas-detail">
+        {/* Leva stran – slika */}
+        <div>
+          {oglas.slikaUrl
+            ? <img src={oglas.slikaUrl} alt={oglas.naslov} className="oglas-slika" />
+            : <div className="oglas-brez-slike"><span>📦</span></div>
+          }
         </div>
-      )}
 
-      {/* Forma za sporočilo */}
-      {user && user.uid !== oglas.userId && (
-        <div className="sporocilo-forma">
-          <h3>📨 Pošlji sporočilo prodajalcu</h3>
-          {status === 'uspeh' && <p className="uspeh">✅ Sporočilo uspešno poslano!</p>}
-          {status && status !== 'uspeh' && <p className="napaka">{status}</p>}
-          <form onSubmit={posljiSporocilo}>
-            <textarea
-              value={vsebina}
-              onChange={e => setVsebina(e.target.value)}
-              placeholder="Npr. Ali je artikel še na voljo?"
-              rows={3}
-              required
-              style={{ width: '100%', padding: '10px', border: '1.5px solid #ddd', borderRadius: '7px', marginBottom: '10px', fontFamily: 'inherit' }}
-            />
-            <button className="btn btn-primary" type="submit" disabled={posiljanje}>
-              {posiljanje ? 'Pošiljanje...' : 'Pošlji sporočilo'}
-            </button>
-          </form>
-        </div>
-      )}
+        {/* Desna stran – info */}
+        <div className="oglas-info">
+          <span className="badge">{oglas.kategorija}</span>
+          <h1>{oglas.naslov}</h1>
+          <div className="oglas-cena">{oglas.cena} €</div>
+          <div className="oglas-datum">Objavljeno: {formatDate(oglas.ustvarjen)}</div>
 
-      {!user && (
-        <div className="sporocilo-forma">
-          <p>Za kontakt prodajalca se <a href="/prijava" style={{ color: '#1a73e8' }}>prijavi</a>.</p>
+          {/* Gumbi lastnika */}
+          {user && user.uid === oglas.userId && (
+            <Link to={`/uredi/${oglas.id}`} className="btn btn-outline" style={{ marginBottom: '20px' }}>
+              ✏️ Uredi oglas
+            </Link>
+          )}
+
+          <p className="oglas-opis">{oglas.opis}</p>
+
+          {/* Forma za sporočilo */}
+          {user && user.uid !== oglas.userId && (
+            <div className="sporocilo-forma">
+              <h3>Kontaktiraj prodajalca</h3>
+              {status === 'uspeh' && <p className="uspeh">✅ Sporočilo poslano!</p>}
+              {status && status !== 'uspeh' && <p className="napaka">{status}</p>}
+              <form onSubmit={posljiSporocilo}>
+                <textarea
+                  value={vsebina}
+                  onChange={e => setVsebina(e.target.value)}
+                  placeholder="Npr. Ali je artikel še na voljo?"
+                  rows={3}
+                  required
+                />
+                <button className="btn btn-primary" type="submit" disabled={posiljanje} style={{ width: '100%' }}>
+                  {posiljanje ? 'Pošiljanje...' : 'Pošlji sporočilo'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {!user && (
+            <div className="sporocilo-forma">
+              <p style={{ fontSize: '0.88rem', color: '#555' }}>
+                Za kontakt prodajalca se <Link to="/prijava" style={{ color: '#111', fontWeight: 600 }}>prijavi</Link>.
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
