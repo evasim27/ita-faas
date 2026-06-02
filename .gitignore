@@ -67,3 +67,9 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Orodja in lokalni podatki
+.agents/
+.postman/
+skills-lock.json
+emu_output.log
