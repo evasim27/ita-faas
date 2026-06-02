@@ -8,6 +8,7 @@ import Oglas from './pages/Oglas'
 import ObjavaOglasa from './pages/ObjavaOglasa'
 import Profil from './pages/Profil'
 import Prijava from './pages/Prijava'
+import UrejanjeOglasa from './pages/UrejanjeOglasa'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export const AuthContext = createContext(null)
@@ -36,6 +37,9 @@ export default function App() {
             } />
             <Route path="/profil" element={
               <ProtectedRoute><Profil /></ProtectedRoute>
+            } />
+            <Route path="/uredi/:id" element={
+              <ProtectedRoute><UrejanjeOglasa /></ProtectedRoute>
             } />
           </Routes>
         </main>

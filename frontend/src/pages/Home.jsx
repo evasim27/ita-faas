@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { BASE_URL } from '../firebase'
+import { BASE_URL, formatDate } from '../firebase'
 
 const KATEGORIJE = ['vse', 'elektronika', 'oblačila', 'pohištvo', 'vozila', 'šport', 'ostalo']
 const IKONE = { elektronika: '📱', oblačila: '👕', pohištvo: '🛋️', vozila: '🚗', šport: '⚽', ostalo: '📦' }
@@ -73,6 +73,7 @@ export default function Home() {
                 <div className="kartica-naslov">{oglas.naslov}</div>
                 <div className="kartica-cena">{oglas.cena} €</div>
                 <span className="kartica-kategorija">{oglas.kategorija}</span>
+                <div className="kartica-meta">📅 {formatDate(oglas.ustvarjen)}</div>
               </div>
             </Link>
           ))}

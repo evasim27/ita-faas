@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { BASE_URL, call } from '../firebase'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { BASE_URL, call, formatDate } from '../firebase'
 import { useAuth } from '../App'
 
 export default function Oglas() {
@@ -49,7 +49,15 @@ export default function Oglas() {
       <span className="kartica-kategorija">{oglas.kategorija}</span>
       <h1 style={{ marginTop: '8px' }}>{oglas.naslov}</h1>
       <div className="oglas-cena">{oglas.cena} €</div>
+      <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '12px' }}>📅 Objavljeno: {formatDate(oglas.ustvarjen)}</p>
       <p className="oglas-opis">{oglas.opis}</p>
+
+      {/* Gumba za lastnika */}
+      {user && user.uid === oglas.userId && (
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+          <Link to={`/uredi/${oglas.id}`} className="btn btn-secondary">✏️ Uredi oglas</Link>
+        </div>
+      )}
 
       {/* Forma za sporočilo */}
       {user && user.uid !== oglas.userId && (

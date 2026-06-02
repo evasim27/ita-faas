@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
-import { auth, call, BASE_URL } from '../firebase'
+import { auth, call, BASE_URL, formatDate } from '../firebase'
 import { useAuth } from '../App'
 
 export default function Profil() {
@@ -89,16 +89,26 @@ export default function Profil() {
           ) : (
             <div className="grid">
               {mojiOglasi.map(o => (
-                <Link to={`/oglas/${o.id}`} key={o.id} className="kartica">
-                  <div className="kartica-slika"><span>📦</span></div>
-                  <div className="kartica-body">
-                    <div className="kartica-naslov">{o.naslov}</div>
-                    <div className="kartica-cena">{o.cena} €</div>
-                    <span className={`kartica-kategorija`} style={{ background: o.aktiven ? '#e8f5e9' : '#fce4ec', color: o.aktiven ? '#2e7d32' : '#c62828' }}>
-                      {o.aktiven ? '✅ aktiven' : '❌ neaktiven'}
-                    </span>
+                <div key={o.id} className="kartica" style={{ display: 'block', textDecoration: 'none' }}>
+                  <Link to={`/oglas/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div className="kartica-slika">
+                      {o.slikaUrl
+                        ? <img src={o.slikaUrl} alt={o.naslov} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <span>📦</span>}
+                    </div>
+                    <div className="kartica-body">
+                      <div className="kartica-naslov">{o.naslov}</div>
+                      <div className="kartica-cena">{o.cena} €</div>
+                      <div className="kartica-meta">📅 {formatDate(o.ustvarjen)}</div>
+                      <span className="kartica-kategorija" style={{ background: o.aktiven ? '#e8f5e9' : '#fce4ec', color: o.aktiven ? '#2e7d32' : '#c62828' }}>
+                        {o.aktiven ? '✅ aktiven' : '❌ neaktiven'}
+                      </span>
+                    </div>
+                  </Link>
+                  <div style={{ display: 'flex', gap: '6px', padding: '8px 12px 12px' }}>
+                    <Link to={`/uredi/${o.id}`} className="btn btn-secondary" style={{ flex: 1, textAlign: 'center', fontSize: '0.82rem', padding: '6px', textDecoration: 'none' }}>✏️ Uredi</Link>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
