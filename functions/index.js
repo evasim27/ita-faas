@@ -5,11 +5,12 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onMessagePublished } = require("firebase-functions/v2/pubsub");
 const { beforeUserCreated } = require("firebase-functions/v2/identity");
 const admin = require("firebase-admin");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 admin.initializeApp({
   storageBucket: "ita-faas-3fd3b.appspot.com",
 });
-const db = admin.firestore();
+const db = getFirestore();
 const BUCKET = "ita-faas-3fd3b.appspot.com";
 
 // ─────────────────────────────────────────────
@@ -38,7 +39,7 @@ exports.noviUporabnik = beforeUserCreated(async (event) => {
       ime: user.displayName || "Neznan uporabnik",
       telefon: "",
       lokacija: "",
-      ustvarjen: admin.firestore.FieldValue.serverTimestamp(),
+      ustvarjen: FieldValue.serverTimestamp(),
       aktiven: true,
     });
     console.log(`Nov uporabnik registriran: ${user.email}`);
@@ -61,7 +62,7 @@ exports.pridobiProfil = onCall(async (request) => {
       ime: request.auth.token.name || "Neznan uporabnik",
       telefon: "",
       lokacija: "",
-      ustvarjen: admin.firestore.FieldValue.serverTimestamp(),
+      ustvarjen: FieldValue.serverTimestamp(),
       aktiven: true,
     });
     doc = await docRef.get();
@@ -108,7 +109,7 @@ exports.objavaOglasa = onCall(async (request) => {
     cena: Number(cena),
     kategorija,
     userId: request.auth.uid,
-    ustvarjen: admin.firestore.FieldValue.serverTimestamp(),
+    ustvarjen: FieldValue.serverTimestamp(),
     aktiven: true,
     slikaUrl: null,
   });
@@ -194,7 +195,7 @@ exports.statistikaObNovemOglasu = onDocumentCreated("oglasi/{oglasId}", async (e
   try {
     const statRef = db.collection("statistika").doc(kategorija);
     await statRef.set(
-      { steviloOglasov: admin.firestore.FieldValue.increment(1) },
+      { steviloOglasov: FieldValue.increment(1) },
       { merge: true }
     );
     console.log(`Statistika posodobljena za kategorijo: ${kategorija}`);
@@ -228,7 +229,7 @@ exports.posljiSporocilo = onCall(async (request) => {
     posiljatelj: request.auth.uid,
     posiljateljEmail: request.auth.token.email,
     vsebina,
-    poslano: admin.firestore.FieldValue.serverTimestamp(),
+    poslano: FieldValue.serverTimestamp(),
   });
   return { message: "Sporočilo poslano.", id: ref.id };
 });
@@ -269,7 +270,7 @@ exports.obvestiloObSporocilu = onDocumentCreated("sporocila/{sporociloId}", asyn
       vsebina: `Novo sporočilo od ${sporocilo.posiljateljEmail}: "${vsebina}"`,
       oglasId,
       prebrano: false,
-      ustvarjeno: admin.firestore.FieldValue.serverTimestamp(),
+      ustvarjeno: FieldValue.serverTimestamp(),
     });
     console.log(`Obvestilo ustvarjeno za oglas ${oglasId}`);
   } catch (err) {
@@ -285,7 +286,7 @@ exports.obdelajSporociloPubSub = onMessagePublished("nova-sporocila", async (eve
     await db.collection("pubsub_log").add({
       vir: "nova-sporocila",
       podatki: data,
-      prejeto: admin.firestore.FieldValue.serverTimestamp(),
+      prejeto: FieldValue.serverTimestamp(),
     });
     console.log("Pub/Sub sporočilo zabeleženo:", data);
   } catch (err) {
@@ -315,7 +316,7 @@ exports.obdelavaSlikeOglasa = onObjectFinalized({ bucket: BUCKET }, async (event
     const fileUrl = `https://storage.googleapis.com/${event.data.bucket}/${filePath}`;
     await db.collection("oglasi").doc(oglasId).update({
       slikaUrl: fileUrl,
-      slikaNalozena: admin.firestore.FieldValue.serverTimestamp(),
+      slikaNalozena: FieldValue.serverTimestamp(),
     });
     console.log(`Slika za oglas ${oglasId} shranjena: ${fileUrl}`);
   } catch (err) {
@@ -351,7 +352,7 @@ exports.obrisaniOglasCistiSlike = onDocumentDeleted("oglasi/{oglasId}", async (e
 exports.deaktivirajStareOglase = onSchedule("0 0 * * *", async () => {
   const meja = new Date();
   meja.setDate(meja.getDate() - 30);
-  const mejaTstamp = admin.firestore.Timestamp.fromDate(meja);
+  const mejaTstamp = Timestamp.fromDate(meja);
 
   try {
     const snapshot = await db.collection("oglasi")
@@ -385,7 +386,7 @@ exports.tedenjiPovzetek = onSchedule("0 8 * * 1", async () => {
     await db.collection("statistika").doc("tedenski_povzetek").set({
       aktivniOglasi: snapshot.size,
       skupajSporocil: sporocilaSnap.size,
-      datum: admin.firestore.FieldValue.serverTimestamp(),
+      datum: FieldValue.serverTimestamp(),
     });
 
     console.log(`Tedenski povzetek shranjen: ${snapshot.size} aktivnih oglasov.`);
