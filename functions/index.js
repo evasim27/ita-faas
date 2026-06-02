@@ -113,7 +113,7 @@ exports.objavaOglasa = onCall(async (request) => {
     userId: request.auth.uid,
     ustvarjen: FieldValue.serverTimestamp(),
     aktiven: true,
-    slikaUrl: null,
+    slike: [],
   });
   return { message: "Oglas objavljen.", id: ref.id };
 });
@@ -154,7 +154,7 @@ exports.pridobiOglas = onRequest(async (req, res) => {
 exports.posodobiOglas = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Uporabnik ni prijavljen.");
 
-  const { id, naslov, opis, cena, slikaUrl } = request.data;
+  const { id, naslov, opis, cena, dodajSlike } = request.data;
   if (!id) throw new HttpsError("invalid-argument", "Parameter id je obvezen.");
 
   const doc = await db.collection("oglasi").doc(id).get();
@@ -167,7 +167,10 @@ exports.posodobiOglas = onCall(async (request) => {
   if (naslov) posodobitve.naslov = naslov;
   if (opis) posodobitve.opis = opis;
   if (cena) posodobitve.cena = Number(cena);
-  if (slikaUrl) posodobitve.slikaUrl = slikaUrl;
+  // dodajSlike je array URL-jev ki jih dodamo obstoječim
+  if (dodajSlike && dodajSlike.length > 0) {
+    posodobitve.slike = FieldValue.arrayUnion(...dodajSlike);
+  }
 
   await db.collection("oglasi").doc(id).update(posodobitve);
   return { message: "Oglas posodobljen." };

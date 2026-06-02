@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { call, BASE_URL, naloziSliko } from '../firebase'
+import { call, BASE_URL, naloziSlike } from '../firebase'
 import { useAuth } from '../App'
 
 const KATEGORIJE = ['elektronika', 'oblačila', 'pohištvo', 'vozila', 'šport', 'ostalo']
@@ -14,9 +14,9 @@ export default function UrejanjeOglasa() {
   const [opis, setOpis] = useState('')
   const [cena, setCena] = useState('')
   const [kategorija, setKategorija] = useState('elektronika')
-  const [novaSlikaFile, setNovaSlikaFile] = useState(null)
-  const [preview, setPreview] = useState(null)
-  const [obstojecaSlika, setObstojecaSlika] = useState(null)
+  const [noveSlikeFiles, setNoveSlikeFiles] = useState([])
+  const [novePreviews, setNovePreviews] = useState([])
+  const [obstojeceSlike, setObstojeceSlike] = useState([])
   const [napaka, setNapaka] = useState('')
   const [loading, setLoading] = useState(false)
   const [brisanje, setBrisanje] = useState(false)
@@ -30,15 +30,14 @@ export default function UrejanjeOglasa() {
         setOpis(data.opis || '')
         setCena(data.cena || '')
         setKategorija(data.kategorija || 'elektronika')
-        setObstojecaSlika(data.slikaUrl || null)
+        setObstojeceSlike(data.slike || [])
       })
   }, [id, user])
 
-  const izbiraSlike = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setNovaSlikaFile(file)
-    setPreview(URL.createObjectURL(file))
+  const izbiraSlik = (e) => {
+    const files = Array.from(e.target.files)
+    setNoveSlikeFiles(files)
+    setNovePreviews(files.map(f => URL.createObjectURL(f)))
   }
 
   const shrani = async (e) => {
@@ -46,9 +45,9 @@ export default function UrejanjeOglasa() {
     setNapaka('')
     setLoading(true)
     try {
-      let slikaUrl
-      if (novaSlikaFile) slikaUrl = await naloziSliko(id, novaSlikaFile)
-      await call('posodobiOglas')({ id, naslov, opis, cena: Number(cena), ...(slikaUrl && { slikaUrl }) })
+      let dodajSlike
+      if (noveSlikeFiles.length > 0) dodajSlike = await naloziSlike(id, noveSlikeFiles)
+      await call('posodobiOglas')({ id, naslov, opis, cena: Number(cena), ...(dodajSlike && { dodajSlike }) })
       navigate(`/oglas/${id}`)
     } catch (err) {
       setNapaka(err.message || 'Napaka pri shranjevanju.')
@@ -89,13 +88,27 @@ export default function UrejanjeOglasa() {
             {KATEGORIJE.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
 
-          <label>Slika</label>
-          {(preview || obstojecaSlika) && (
-            <img src={preview || obstojecaSlika} alt="Slika oglasa"
-              style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px' }} />
+          <label>Obstoječe slike</label>
+          {obstojeceSlike.length > 0 ? (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              {obstojeceSlike.map((url, i) => (
+                <img key={i} src={url} alt={`Slika ${i+1}`}
+                  style={{ width: '72px', height: '72px', objectFit: 'cover', border: '1.5px solid #111' }} />
+              ))}
+            </div>
+          ) : <p style={{ fontSize: '0.82rem', color: '#888', marginBottom: '12px' }}>Ni slik.</p>}
+
+          <label>Dodaj nove slike</label>
+          <input type="file" accept="image/*" multiple onChange={izbiraSlik}
+            style={{ padding: '8px', border: '1.5px dashed #aaa', borderRadius: '2px', marginBottom: '8px', cursor: 'pointer', width: '100%' }} />
+          {novePreviews.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {novePreviews.map((p, i) => (
+                <img key={i} src={p} alt={`Nova ${i+1}`}
+                  style={{ width: '72px', height: '72px', objectFit: 'cover', border: '1.5px solid #111' }} />
+              ))}
+            </div>
           )}
-          <input type="file" accept="image/*" onChange={izbiraSlike}
-            style={{ padding: '8px', border: '1.5px dashed #ddd', borderRadius: '7px', marginBottom: '16px', cursor: 'pointer' }} />
 
           <div style={{ display: 'flex', gap: '10px' }}>
             <button className="btn btn-primary" type="submit" disabled={loading} style={{ flex: 1 }}>

@@ -102,8 +102,8 @@ export default function Profil() {
                 <div key={o.id} className="kartica" style={{ display: 'block', textDecoration: 'none' }}>
                   <Link to={`/oglas/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className="kartica-slika">
-                      {o.slikaUrl
-                        ? <img src={o.slikaUrl} alt={o.naslov} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {o.slike && o.slike[0]
+                        ? <img src={o.slike[0]} alt={o.naslov} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : <span>📦</span>}
                     </div>
                     <div className="kartica-body">

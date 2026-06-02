@@ -28,11 +28,15 @@ export const BASE_URL = 'http://127.0.0.1:5001/ita-faas-3fd3b/us-central1'
 // Pomožna funkcija za onCall klice
 export const call = (name) => httpsCallable(functions, name)
 
-// Naloži sliko v Storage in vrne download URL
-export async function naloziSliko(oglasId, file) {
-  const slikaRef = ref(storage, `oglasi/${oglasId}/${file.name}`)
-  await uploadBytes(slikaRef, file)
-  return getDownloadURL(slikaRef)
+// Naloži eno ali več slik in vrne array URL-jev
+export async function naloziSlike(oglasId, files) {
+  const urls = []
+  for (const file of files) {
+    const slikaRef = ref(storage, `oglasi/${oglasId}/${Date.now()}_${file.name}`)
+    await uploadBytes(slikaRef, file)
+    urls.push(await getDownloadURL(slikaRef))
+  }
+  return urls
 }
 
 // Formatira Firestore timestamp v slovensko obliko datuma

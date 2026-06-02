@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { call, naloziSliko } from '../firebase'
+import { call, naloziSlike } from '../firebase'
 
 const KATEGORIJE = ['elektronika', 'oblačila', 'pohištvo', 'vozila', 'šport', 'ostalo']
 
@@ -9,17 +9,16 @@ export default function ObjavaOglasa() {
   const [opis, setOpis] = useState('')
   const [cena, setCena] = useState('')
   const [kategorija, setKategorija] = useState('elektronika')
-  const [slika, setSlika] = useState(null)
-  const [preview, setPreview] = useState(null)
+  const [slike, setSlike] = useState([])
+  const [previews, setPreviews] = useState([])
   const [napaka, setNapaka] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const izbiraSlike = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setSlika(file)
-    setPreview(URL.createObjectURL(file))
+  const izbiraSlik = (e) => {
+    const files = Array.from(e.target.files)
+    setSlike(files)
+    setPreviews(files.map(f => URL.createObjectURL(f)))
   }
 
   const oddaj = async (e) => {
@@ -27,14 +26,12 @@ export default function ObjavaOglasa() {
     setNapaka('')
     setLoading(true)
     try {
-      // 1. Ustvari oglas
       const res = await call('objavaOglasa')({ naslov, opis, cena: Number(cena), kategorija })
       const oglasId = res.data.id
 
-      // 2. Naloži sliko in takoj shrani URL v oglas
-      if (slika) {
-        const slikaUrl = await naloziSliko(oglasId, slika)
-        await call('posodobiOglas')({ id: oglasId, slikaUrl })
+      if (slike.length > 0) {
+        const urls = await naloziSlike(oglasId, slike)
+        await call('posodobiOglas')({ id: oglasId, dodajSlike: urls })
       }
 
       navigate(`/oglas/${oglasId}`)
@@ -48,7 +45,7 @@ export default function ObjavaOglasa() {
   return (
     <div style={{ paddingTop: '20px' }}>
       <div className="forma">
-        <h2>📝 Objavi oglas</h2>
+        <h2>Objavi oglas</h2>
         {napaka && <p className="napaka">{napaka}</p>}
         <form onSubmit={oddaj}>
           <label>Naslov oglasa</label>
@@ -65,12 +62,22 @@ export default function ObjavaOglasa() {
             {KATEGORIJE.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
 
-          <label>Slika <span style={{ color: '#888', fontWeight: 400 }}>(neobvezno)</span></label>
-          <input type="file" accept="image/*" onChange={izbiraSlike}
-            style={{ padding: '8px', border: '1.5px dashed #ddd', borderRadius: '7px', marginBottom: '8px', cursor: 'pointer' }} />
-          {preview && (
-            <img src={preview} alt="Predogled"
-              style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '8px', marginBottom: '16px' }} />
+          <label>Slike <span style={{ color: '#888', fontWeight: 400 }}>(do 5, neobvezno)</span></label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={izbiraSlik}
+            style={{ padding: '8px', border: '1.5px dashed #aaa', borderRadius: '2px', marginBottom: '10px', cursor: 'pointer', width: '100%' }}
+          />
+
+          {previews.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {previews.map((p, i) => (
+                <img key={i} src={p} alt={`Predogled ${i+1}`}
+                  style={{ width: '80px', height: '80px', objectFit: 'cover', border: '1.5px solid #111' }} />
+              ))}
+            </div>
           )}
 
           <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%' }}>

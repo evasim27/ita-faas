@@ -7,6 +7,7 @@ export default function Oglas() {
   const { id } = useParams()
   const [oglas, setOglas] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [aktivnaSlika, setAktivnaSlika] = useState(0)
   const [vsebina, setVsebina] = useState('')
   const [status, setStatus] = useState('')
   const [posiljanje, setPosiljanje] = useState(false)
@@ -42,12 +43,36 @@ export default function Oglas() {
   return (
     <div>
       <div className="oglas-detail">
-        {/* Leva stran – slika */}
+        {/* Leva stran – galerija */}
         <div>
-          {oglas.slikaUrl
-            ? <img src={oglas.slikaUrl} alt={oglas.naslov} className="oglas-slika" />
-            : <div className="oglas-brez-slike"><span>📦</span></div>
-          }
+          {oglas.slike && oglas.slike.length > 0 ? (
+            <>
+              <div className="oglas-galerija">
+                <img
+                  src={oglas.slike[aktivnaSlika]}
+                  alt={oglas.naslov}
+                  className="oglas-galerija-slika"
+                />
+                {oglas.slike.length > 1 && (
+                  <>
+                    <button className="galerija-nav levo" onClick={() => setAktivnaSlika(i => (i - 1 + oglas.slike.length) % oglas.slike.length)}>‹</button>
+                    <button className="galerija-nav desno" onClick={() => setAktivnaSlika(i => (i + 1) % oglas.slike.length)}>›</button>
+                  </>
+                )}
+              </div>
+              {oglas.slike.length > 1 && (
+                <div className="galerija-thumbnails">
+                  {oglas.slike.map((url, i) => (
+                    <img key={i} src={url} alt={`Slika ${i+1}`}
+                      className={`galerija-thumb ${i === aktivnaSlika ? 'active' : ''}`}
+                      onClick={() => setAktivnaSlika(i)} />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="oglas-brez-slike"><span>📦</span></div>
+          )}
         </div>
 
         {/* Desna stran – info */}

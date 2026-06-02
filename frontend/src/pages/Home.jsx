@@ -67,8 +67,8 @@ export default function Home() {
             <div key={oglas.id} className="kartica">
               <Link to={`/oglas/${oglas.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="kartica-slika">
-                  {oglas.slikaUrl
-                    ? <img src={oglas.slikaUrl} alt={oglas.naslov} />
+                  {oglas.slike && oglas.slike[0]
+                    ? <img src={oglas.slike[0]} alt={oglas.naslov} />
                     : <span>{IKONE[oglas.kategorija] || '📦'}</span>
                   }
                 </div>
