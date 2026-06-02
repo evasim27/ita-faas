@@ -1,0 +1,104 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f5f5f5;
+  color: #222;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* NAV */
+nav {
+  background: #1a73e8;
+  color: white;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+nav .logo { font-size: 1.3rem; font-weight: 700; text-decoration: none; color: white; }
+nav .nav-links { display: flex; gap: 8px; align-items: center; }
+nav a { color: white; text-decoration: none; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; }
+nav a:hover { background: rgba(255,255,255,0.2); }
+nav .btn-objavi { background: white; color: #1a73e8; font-weight: 600; padding: 8px 16px; border-radius: 20px; }
+nav .btn-objavi:hover { background: #e8f0fe; }
+
+/* KARTICE */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+
+.kartica {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+.kartica:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.kartica-slika { width: 100%; height: 160px; object-fit: cover; background: #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+.kartica-body { padding: 12px; }
+.kartica-naslov { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kartica-cena { color: #1a73e8; font-weight: 700; font-size: 1.1rem; }
+.kartica-meta { font-size: 0.8rem; color: #888; margin-top: 4px; }
+.kartica-kategorija { display: inline-block; background: #e8f0fe; color: #1a73e8; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; margin-top: 6px; }
+
+/* FORMA */
+.forma { background: white; border-radius: 10px; padding: 28px; max-width: 560px; margin: 0 auto; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.forma h2 { margin-bottom: 20px; color: #1a73e8; }
+.forma label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; color: #444; }
+.forma input, .forma textarea, .forma select {
+  width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 7px;
+  font-size: 0.95rem; margin-bottom: 16px; font-family: inherit;
+}
+.forma input:focus, .forma textarea:focus, .forma select:focus { outline: none; border-color: #1a73e8; }
+.forma textarea { resize: vertical; min-height: 100px; }
+
+/* GUMBI */
+.btn { padding: 10px 24px; border: none; border-radius: 7px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.btn-primary { background: #1a73e8; color: white; }
+.btn-primary:hover { background: #1557b0; }
+.btn-danger { background: #e53935; color: white; }
+.btn-danger:hover { background: #b71c1c; }
+.btn-secondary { background: #f0f0f0; color: #333; }
+.btn-secondary:hover { background: #e0e0e0; }
+
+/* STRAN OGLASA */
+.oglas-detail { background: white; border-radius: 10px; padding: 28px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.oglas-detail h1 { font-size: 1.5rem; margin-bottom: 8px; }
+.oglas-cena { font-size: 1.8rem; color: #1a73e8; font-weight: 700; margin: 12px 0; }
+.oglas-slika { width: 100%; max-height: 360px; object-fit: cover; border-radius: 8px; margin-bottom: 16px; }
+.oglas-opis { line-height: 1.6; color: #444; margin-bottom: 20px; }
+
+/* SPOROCILO FORMA */
+.sporocilo-forma { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-top: 24px; }
+.sporocilo-forma h3 { margin-bottom: 12px; }
+
+/* PROFIL */
+.profil-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.profil-avatar { width: 72px; height: 72px; border-radius: 50%; background: #1a73e8; color: white; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; }
+
+/* NALAGANJE / PRAZNO */
+.loading { display: flex; justify-content: center; padding: 60px; font-size: 1.1rem; color: #888; }
+.prazno { text-align: center; padding: 60px; color: #aaa; font-size: 1rem; }
+
+/* SPOROCILA */
+.napaka { color: #e53935; font-size: 0.88rem; margin-bottom: 12px; }
+.uspeh { color: #2e7d32; font-size: 0.88rem; margin-bottom: 12px; }
+
+/* ZAVIHKI */
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
+.tab { padding: 10px 20px; cursor: pointer; font-weight: 600; color: #888; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.tab.active { color: #1a73e8; border-bottom-color: #1a73e8; }

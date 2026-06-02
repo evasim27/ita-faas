@@ -1,28 +1,19 @@
-# Serverless Tržnica Oglasov – Firebase FaaS
+# Serverless sistem za oglase (Firebase FaaS)
 
-Brezstrežniška spletna tržnica za objavljanje in iskanje rabljenih predmetov, zgrajena z **Firebase Cloud Functions v2**.
+Brezstrežniška spletna tržnica za objavljanje in iskanje rabljenih predmetov, zgrajena s **Firebase Cloud Functions*.
 
 ---
 
 ## Ideja sistema
 
-**Tržnica Oglasov** je platforma, kjer registrirani uporabniki objavljajo, urejajo in brišejo oglase za rabljene predmete, kupci pa jim pišejo sporočila. Sistem deluje v celoti brezstrežniško – ni nobenega trajno delujočega strežnika. Vsaka operacija (HTTP zahteva, sprememba v bazi, nalaganje datoteke, časovnik) sproži točno določeno Cloud Function, ki se zažene, opravi delo in se ustavi.
-
-### Zakaj brezstrežniška arhitektura?
-
-| Zahteva | Kako je izpolnjena |
-|---|---|
-| Brez upravljanja strežnikov | Firebase gosti in poganja funkcije |
-| Samodejno prilagajanje obsega | Cloud Functions se samodejno skalirajo |
-| Plačilo glede na uporabo | Zaračuna se vsaka klicana funkcija |
-| Visoka razpoložljivost | Google infrastruktura, multi-region |
+ Sistem za oglase je platforma, kjer registrirani uporabniki objavljajo, urejajo in brišejo oglase za rabljene predmete, kupci pa jim lahko napišejo sporočila. Sistem deluje v celoti brezstrežniško – ni nobenega trajno delujočega strežnika. Vsaka operacija (HTTP zahteva, sprememba v bazi, nalaganje datoteke, časovnik) sproži točno določeno Cloud Function, ki se zažene, opravi delo in se ustavi.
 
 ---
 
 ## Tehnologije
 
 - **Firebase Cloud Functions v2** (FaaS)
-- **Cloud Firestore** (BaaS – podatkovna baza)
+- **Cloud Firestore** (podatkovna baza)
 - **Firebase Authentication** (avtentikacija)
 - **Firebase Storage** (shramba slik)
 - **Cloud Pub/Sub** (sporočilna vrsta)
@@ -31,9 +22,9 @@ Brezstrežniška spletna tržnica za objavljanje in iskanje rabljenih predmetov,
 
 ---
 
-## 5 Glavnih funkcionalnosti
+## Glavne funkcionalnosti
 
-### 1. Avtentikacija & Upravljanje uporabnikov
+### 1. Avtentikacija in upravljanje uporabnikov
 *Zagotavlja varno registracijo, prijavo in upravljanje profilov.*
 
 | Funkcija | Event tip | Opis |
@@ -97,7 +88,7 @@ Brezstrežniška spletna tržnica za objavljanje in iskanje rabljenih predmetov,
 
 ## Avtentikacija
 
-Vse mutacijske HTTP funkcije (POST, PUT, DELETE) zahtevajo veljaven **Firebase JWT Bearer token** v glavi `Authorization`.
+HTTP funkcije (POST, PUT, DELETE) zahtevajo veljaven **Firebase JWT Bearer token** v glavi `Authorization`.
 
 ```
 Authorization: Bearer <firebase_id_token>
@@ -150,49 +141,3 @@ Uvozi zbirko zahtev in nastavi spremenljivko `BASE_URL` na:
 ```
 http://127.0.0.1:5001/ita-faas-3fd3b/us-central1
 ```
-
-#### Primer – Ustvarjanje oglasa (zahteva JWT)
-```
-POST {{BASE_URL}}/objavaOglasa
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "naslov": "iPhone 14",
-  "opis": "Odlično stanje, malo rabljen",
-  "cena": 650,
-  "kategorija": "elektronika"
-}
-```
-
----
-
-## Obstoječe stanje (pred implementacijo)
-
-### Že implementirano ✓
-- `objavaOglasa` – HTTP POST (brez auth)
-- `pridobiOglase` – HTTP GET
-- `obvestiloObSporocilu` – Firestore trigger (vsebuje bug s cirilico)
-- `obdelavaSlikeOglasa` – Storage trigger
-- `deaktivirajStareOglase` – Scheduled trigger
-- `noviUporabnik` – Auth trigger
-
-### Popravki obstoječe kode
-- **BUG:** `"sporocila/{sporoциloId}"` vsebuje cirilične znake → popravljeno v `{sporociloId}`
-- **BUG:** HTTP endpointi nimajo avtentikacije → dodana `verifyToken` zaščita
-
-### Novo dodano
-- `verifyToken` – pomožna funkcija za JWT preverjanje
-- `pridobiProfil`, `posodobiProfil` – upravljanje profilov
-- `pridobiOglas`, `posodobiOglas`, `izbrisiOglas` – CRUD za oglase
-- `statistikaObNovemOglasu` – Firestore trigger za statistiko
-- `posljiSporocilo`, `pridobiSporocila` – HTTP endpointi za sporočila
-- `obdelajSporociloPubSub` – Pub/Sub trigger
-- `obrisaniOglasCistiSlike` – Firestore onDocumentDeleted trigger
-- `tedenjiPovzetek` – drugi Scheduled trigger
-
----
-
-## Avtor
-
-Eva – ITA FaaS naloga, 2025/2026
